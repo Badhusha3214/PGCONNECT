@@ -84,6 +84,7 @@ bookingsRouter.get('/mine', authMiddleware, async (c) => {
     `)
     .eq('tenant_id', user.id)
     .order('created_at', { ascending: false })
+    .order('position', { referencedTable: 'properties.property_images', ascending: true })
 
   if (error) return c.json({ success: false, message: error.message }, 500)
   const bookings = await attachRentStatus(supabase, data ?? [])

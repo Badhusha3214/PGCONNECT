@@ -102,6 +102,7 @@ adminRouter.get('/verification-queue', async (c) => {
     `, { count: 'exact' })
     .eq('status', status)
     .order('created_at', { ascending: true })
+    .order('position', { referencedTable: 'property_images', ascending: true })
     .range(from, from + limitNum - 1)
 
   if (error) return c.json({ success: false, message: error.message }, 500)

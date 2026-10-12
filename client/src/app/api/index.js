@@ -120,6 +120,24 @@ export const deleteProperty = async (propertyId) => {
   return authFetch(`/api/properties/${propertyId}`, { method: 'DELETE' })
 }
 
+export const addPropertyPhotos = async (propertyId, files) => {
+  const form = new FormData()
+  files.forEach((f) => form.append('images', f))
+  return authFetchForm(`/api/properties/${propertyId}/images`, form)
+}
+
+export const deletePropertyPhoto = async (propertyId, imageId) => {
+  return authFetch(`/api/properties/${propertyId}/images/${imageId}`, { method: 'DELETE' })
+}
+
+// imageIds in display order; the first becomes the cover photo.
+export const reorderPropertyPhotos = async (propertyId, imageIds) => {
+  return authFetch(`/api/properties/${propertyId}/images/order`, {
+    method: 'PATCH',
+    body: JSON.stringify({ image_ids: imageIds }),
+  })
+}
+
 export const getOwnerProperties = async () => {
   return authFetch('/api/properties/owner/mine')
 }

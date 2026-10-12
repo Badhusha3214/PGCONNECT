@@ -17,6 +17,7 @@ import {
   getListingConfig,
 } from "../api";
 import ListingStatus from "./ListingStatus";
+import PhotoManager from "./PhotoManager";
 import KycSection from "./KycSection";
 import { LogoMark } from "../components/Logo";
 
@@ -61,6 +62,7 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const [inquirySearch, setInquirySearch] = useState("");
   const [activeNav, setActiveNav] = useState("Dashboard");
+  const [photosOpenId, setPhotosOpenId] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useDismissableOverlay(sidebarOpen, () => setSidebarOpen(false));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -564,7 +566,8 @@ export default function OwnerDashboard() {
                   ) : (
                     <div className="divide-y divide-slate-50">
                       {properties.map((p) => (
-                        <div key={p.id} className="px-5 sm:px-6 py-4 flex items-center gap-4">
+                        <div key={p.id} className="px-5 sm:px-6 py-4">
+                        <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl overflow-hidden bg-[var(--pg-bg)] shrink-0">
                             {p.property_images?.[0]?.image_url && (
                               <img src={p.property_images[0].image_url} alt={p.name} className="w-full h-full object-cover" />
@@ -574,6 +577,15 @@ export default function OwnerDashboard() {
                             <p className="text-sm font-semibold text-[var(--pg-text)] truncate">{p.name}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{p.city}</p>
                             <ListingStatus property={p} fee={listingFee} onPaid={reloadProperties} />
+                            <button
+                              type="button"
+                              onClick={() => setPhotosOpenId((id) => (id === p.id ? null : p.id))}
+                              aria-expanded={photosOpenId === p.id}
+                              className="mt-1.5 text-[11px] font-bold cursor-pointer"
+                              style={{ color: "var(--pg-terracotta)" }}
+                            >
+                              {photosOpenId === p.id ? "Close photos" : `Photos (${p.property_images?.length ?? 0})`}
+                            </button>
                           </div>
                           <div className="flex items-center gap-5 shrink-0">
                             <div className="flex items-center gap-1.5" title="Views">
@@ -585,6 +597,8 @@ export default function OwnerDashboard() {
                               <span className="text-sm font-bold text-[var(--pg-text)]">{p.saves_count ?? 0}</span>
                             </div>
                           </div>
+                        </div>
+                        {photosOpenId === p.id && <PhotoManager property={p} onChanged={reloadProperties} />}
                         </div>
                       ))}
                     </div>

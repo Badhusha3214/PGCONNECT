@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createProperty, getCurrentUser } from "../api";
 import { supabase } from "../../lib/supabase";
+import { MAX_PHOTOS, PHOTO_TYPES, PHOTO_ACCEPT, compressPhoto } from "../../lib/photos";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -73,6 +74,39 @@ function ListPropertyForm() {
     },
   ]);
 
+  // [{ file, preview }] — preview is an object URL, revoked on remove/unmount.
+  const [photos, setPhotos] = useState([]);
+  const [photoError, setPhotoError] = useState("");
+  const [processingPhotos, setProcessingPhotos] = useState(false);
+
+  useEffect(() => () => photos.forEach((p) => URL.revokeObjectURL(p.preview)), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addPhotos = async (fileList) => {
+    setPhotoError("");
+    const picked = Array.from(fileList || []);
+    const valid = picked.filter((f) => PHOTO_TYPES.includes(f.type));
+    if (valid.length < picked.length) setPhotoError("Only JPG, PNG or WebP photos can be added.");
+    const room = MAX_PHOTOS - photos.length;
+    if (valid.length > room) setPhotoError(`You can add up to ${MAX_PHOTOS} photos.`);
+    const toAdd = valid.slice(0, Math.max(room, 0));
+    if (toAdd.length === 0) return;
+    setProcessingPhotos(true);
+    const files = await Promise.all(toAdd.map(compressPhoto));
+    setPhotos((prev) => [...prev, ...files.map((file) => ({ file, preview: URL.createObjectURL(file) }))]);
+    setProcessingPhotos(false);
+  };
+
+  const removePhoto = (index) => {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const makeCover = (index) => {
+    setPhotos((prev) => [prev[index], ...prev.filter((_, i) => i !== index)]);
+  };
+
   const updateField = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -123,6 +157,7 @@ function ListPropertyForm() {
     fd.append("commission_option", form.commission_option);
     if (form.referral_code.trim()) fd.append("referral_code", form.referral_code.trim());
     if (form.agent_code.trim()) fd.append("agent_code", form.agent_code.trim());
+    photos.forEach((p) => fd.append("images", p.file));
     fd.append("rooms", JSON.stringify(rooms.map((room) => ({
       type: room.type,
       price: Number(room.price),
@@ -139,6 +174,10 @@ function ListPropertyForm() {
 
     if (!form.name || !form.address || !form.city || !form.state || !form.managerName || rooms.length === 0 || hasInvalidRoom) {
       setSubmitError("Please fill in the required fields.");
+      return;
+    }
+    if (photos.length === 0) {
+      setSubmitError("Add at least one photo of your PG — listings with photos get far more inquiries.");
       return;
     }
 
@@ -484,6 +523,69 @@ function ListPropertyForm() {
                     />
                   </div>
                 </div>
+              </section>
+
+              {/* Photos section */}
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)]">Photos</h3>
+                  <p className="text-xs text-[var(--pg-text-tertiary)] mt-1">
+                    Add up to {MAX_PHOTOS} photos — rooms, beds, bathroom, kitchen and the building outside. The first photo is the cover students see in search.
+                  </p>
+                </div>
+
+                <label
+                  className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-4 py-8 text-center transition-colors ${photos.length >= MAX_PHOTOS ? "opacity-50 cursor-not-allowed border-[var(--pg-border)]" : "cursor-pointer border-[var(--pg-border)] hover:border-[var(--pg-terracotta)] bg-[var(--pg-bg)]"}`}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); if (photos.length < MAX_PHOTOS) addPhotos(e.dataTransfer.files); }}
+                >
+                  <svg className="w-8 h-8 text-[var(--pg-terracotta)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" />
+                  </svg>
+                  <span className="text-sm font-semibold text-[var(--pg-text)]">
+                    {processingPhotos ? "Preparing photos…" : "Tap to add photos, or drag them here"}
+                  </span>
+                  <span className="text-xs text-[var(--pg-text-tertiary)]">JPG, PNG or WebP · {photos.length}/{MAX_PHOTOS} added</span>
+                  <input
+                    type="file"
+                    accept={PHOTO_ACCEPT}
+                    multiple
+                    className="sr-only"
+                    disabled={photos.length >= MAX_PHOTOS || processingPhotos}
+                    onChange={(e) => { addPhotos(e.target.files); e.target.value = ""; }}
+                  />
+                </label>
+
+                {photoError && <p className="text-xs text-red-600">{photoError}</p>}
+
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {photos.map((p, i) => (
+                      <div key={p.preview} className="relative aspect-square rounded-xl overflow-hidden bg-[var(--pg-bg)] group">
+                        <img src={p.preview} alt={`PG photo ${i + 1}`} className="w-full h-full object-cover" />
+                        {i === 0 ? (
+                          <span className="absolute left-1.5 bottom-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: "var(--pg-terracotta)" }}>Cover</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => makeCover(i)}
+                            className="absolute left-1.5 bottom-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/90 text-[var(--pg-ink)] cursor-pointer"
+                          >
+                            Make cover
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(i)}
+                          aria-label={`Remove photo ${i + 1}`}
+                          className="absolute right-1.5 top-1.5 w-7 h-7 grid place-items-center rounded-full bg-black/60 text-white cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </section>
 
               {/* Referral section */}

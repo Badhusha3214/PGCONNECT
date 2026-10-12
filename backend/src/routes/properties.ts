@@ -1,4 +1,4 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { cache } from 'hono/cache'
 import { getSupabase } from '../lib/supabase'
 import { authMiddleware, requireRole } from '../middleware/auth'
@@ -17,6 +17,72 @@ const publicCache = cache({ cacheName: 'pgconnect-properties', cacheControl: 'pu
 
 const MAX_PAGE_SIZE = 100
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const MAX_PHOTOS = 10
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024
+const PHOTO_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+const PHOTO_FILE_RE = /^[0-9a-f-]{36}\.(jpg|png|webp)$/
+
+type Ctx = Context<Env>
+
+// Returns an error message if this batch of photos can't be accepted.
+const photoProblem = (files: File[], alreadyStored = 0): string | null => {
+  if (files.length + alreadyStored > MAX_PHOTOS) return `A PG can have up to ${MAX_PHOTOS} photos`
+  const bad = files.find((f) => !PHOTO_TYPES[f.type] || f.size > MAX_PHOTO_BYTES)
+  return bad ? `"${bad.name}" must be a JPG, PNG or WebP image under 5 MB` : null
+}
+
+// Uploads photos to R2 and records them; they're served back through
+// GET /images/:propertyId/:file, which is what image_url points at.
+const storePhotos = async (c: Ctx, propertyId: string, files: File[], startPosition: number) => {
+  const origin = new URL(c.req.url).origin
+  const rows = []
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const fileName = `${crypto.randomUUID()}.${PHOTO_TYPES[file.type]}`
+    const key = `properties/${propertyId}/${fileName}`
+    await uploadToR2(c.env.R2, key, await file.arrayBuffer(), file.type)
+    rows.push({
+      property_id: propertyId,
+      image_key: key,
+      image_url: `${origin}/api/properties/images/${propertyId}/${fileName}`,
+      position: startPosition + i,
+    })
+  }
+  return getSupabase(c.env).from('property_images').insert(rows).select('id, image_url, position')
+}
+
+// The property if the signed-in user owns it (or is an admin), else an error response.
+const ownedProperty = async (c: Ctx, propertyId: string) => {
+  if (!UUID_RE.test(propertyId)) return { error: c.json({ success: false, message: 'Property not found' }, 404) }
+  const user = c.get('user')
+  const { data } = await getSupabase(c.env).from('properties').select('id, owner_id').eq('id', propertyId).single()
+  if (!data) return { error: c.json({ success: false, message: 'Property not found' }, 404) }
+  if (data.owner_id !== user.id && user.role !== 'admin') {
+    return { error: c.json({ success: false, message: 'Not authorized' }, 403) }
+  }
+  return { property: data }
+}
+
+// GET /api/properties/images/:propertyId/:file — public PG photos.
+// The R2 bucket is private (it also holds KYC documents), so photos are served
+// through the Worker, and only from the properties/ prefix.
+propertiesRouter.get('/images/:propertyId/:file', async (c) => {
+  const { propertyId, file } = c.req.param()
+  if (!UUID_RE.test(propertyId) || !PHOTO_FILE_RE.test(file)) return c.notFound()
+
+  const object = await c.env.R2.get(`properties/${propertyId}/${file}`)
+  if (!object) return c.notFound()
+
+  return new Response(object.body, {
+    headers: {
+      'Content-Type': object.httpMetadata?.contentType ?? 'image/jpeg',
+      // Keys are random UUIDs and never overwritten, so the file never changes.
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      ETag: object.httpEtag,
+    },
+  })
+})
 
 // GET /api/properties — public, with filters
 propertiesRouter.get('/', publicCache, async (c) => {
@@ -56,6 +122,8 @@ propertiesRouter.get('/', publicCache, async (c) => {
   }
   const s = sortMap[sort ?? 'newest'] ?? { column: 'created_at', ascending: false }
   query = query.order(s.column, { ascending: s.ascending })
+  // Lowest position first, so property_images[0] is always the owner's chosen cover.
+  query = query.order('position', { referencedTable: 'property_images', ascending: true })
 
   const pageNum = Math.max(1, Math.floor(Number(page)) || 1)
   const limitNum = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(Number(limit)) || 12))
@@ -107,11 +175,12 @@ propertiesRouter.get('/owner/mine', authMiddleware, requireRole('owner', 'admin'
   const { data, error } = await supabase
     .from('properties')
     .select(`
-      *, property_images(image_key, image_url, position),
+      *, property_images(id, image_key, image_url, position),
       property_rooms(*, beds(id, label, status))
     `)
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
+    .order('position', { referencedTable: 'property_images', ascending: true })
 
   if (error) return c.json({ success: false, message: error.message }, 500)
   return c.json({ success: true, count: data?.length ?? 0, properties: data ?? [] })
@@ -140,6 +209,7 @@ propertiesRouter.get('/:id', async (c, next) => {
       property_rooms(*)
     `)
     .eq('id', c.req.param('id'))
+    .order('position', { referencedTable: 'property_images', ascending: true })
     .single()
 
   if (error || !property) return c.json({ success: false, message: 'Property not found' }, 404)
@@ -184,6 +254,8 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   if (!body.name || !body.address || !body.city || !body.state) {
     return c.json({ success: false, message: 'name, address, city, and state are required' }, 400)
   }
+  const photoError = photoProblem(imageFiles)
+  if (photoError) return c.json({ success: false, message: photoError }, 400)
 
   // Resolve referral code to referrer UUID
   let referredBy: string | null = null
@@ -268,20 +340,72 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
     if (bedInserts.length > 0) await supabase.from('beds').insert(bedInserts)
   }
 
-  // Upload images to R2
   if (imageFiles.length > 0) {
-    const imageInserts = []
-    for (let i = 0; i < imageFiles.length; i++) {
-      const file = imageFiles[i]
-      const ext = file.name.split('.').pop() ?? 'jpg'
-      const key = `properties/${property.id}/${crypto.randomUUID()}.${ext}`
-      await uploadToR2(c.env.R2, key, await file.arrayBuffer(), file.type)
-      imageInserts.push({ property_id: property.id, image_key: key, position: i })
-    }
-    await supabase.from('property_images').insert(imageInserts)
+    const { error: imagesError } = await storePhotos(c, property.id, imageFiles, 0)
+    if (imagesError) console.error('[properties/create] property_images insert failed:', imagesError.message)
   }
 
   return c.json({ success: true, message: 'Property submitted for review', property }, 201)
+})
+
+// POST /api/properties/:id/images — owner adds photos to an existing listing
+propertiesRouter.post('/:id/images', authMiddleware, async (c) => {
+  const propertyId = c.req.param('id')
+  const owned = await ownedProperty(c, propertyId)
+  if (owned.error) return owned.error
+
+  const formData = await c.req.formData()
+  const files = (formData.getAll('images') as unknown[]).filter((f): f is File => f instanceof File)
+  if (files.length === 0) return c.json({ success: false, message: 'No photos received' }, 400)
+
+  const supabase = getSupabase(c.env)
+  const { data: existing } = await supabase.from('property_images').select('position').eq('property_id', propertyId)
+  const problem = photoProblem(files, existing?.length ?? 0)
+  if (problem) return c.json({ success: false, message: problem }, 400)
+
+  const nextPosition = Math.max(-1, ...(existing ?? []).map((r: { position: number }) => r.position)) + 1
+  const { data, error } = await storePhotos(c, propertyId, files, nextPosition)
+  if (error) return c.json({ success: false, message: error.message }, 500)
+  return c.json({ success: true, images: data ?? [] }, 201)
+})
+
+// PATCH /api/properties/:id/images/order — body { image_ids: [...] }, first = cover
+propertiesRouter.patch('/:id/images/order', authMiddleware, async (c) => {
+  const propertyId = c.req.param('id')
+  const owned = await ownedProperty(c, propertyId)
+  if (owned.error) return owned.error
+
+  const { image_ids } = await c.req.json()
+  if (!Array.isArray(image_ids) || !image_ids.every((id) => typeof id === 'string' && UUID_RE.test(id))) {
+    return c.json({ success: false, message: 'image_ids must be a list of photo ids' }, 400)
+  }
+
+  const supabase = getSupabase(c.env)
+  // Scoped to this property, so ids from someone else's listing are ignored.
+  await Promise.all(image_ids.map((id: string, position: number) =>
+    supabase.from('property_images').update({ position }).eq('id', id).eq('property_id', propertyId)
+  ))
+  return c.json({ success: true })
+})
+
+// DELETE /api/properties/:id/images/:imageId — owner removes one photo
+propertiesRouter.delete('/:id/images/:imageId', authMiddleware, async (c) => {
+  const { id: propertyId, imageId } = c.req.param()
+  const owned = await ownedProperty(c, propertyId)
+  if (owned.error) return owned.error
+
+  const supabase = getSupabase(c.env)
+  const { data: image } = await supabase
+    .from('property_images')
+    .select('id, image_key')
+    .eq('id', imageId)
+    .eq('property_id', propertyId)
+    .maybeSingle()
+  if (!image) return c.json({ success: false, message: 'Photo not found' }, 404)
+
+  await supabase.from('property_images').delete().eq('id', image.id)
+  await deleteFromR2(c.env.R2, [image.image_key])
+  return c.json({ success: true })
 })
 
 // PATCH /api/properties/:id — owner updates own listing

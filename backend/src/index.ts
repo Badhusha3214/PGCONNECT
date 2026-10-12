@@ -19,7 +19,13 @@ import type { Env } from './types'
 const app = new Hono<Env>()
 
 app.use('*', logger())
-app.use('*', secureHeaders())
+// PG photos are embedded by the frontend on another origin, so they must allow
+// cross-origin loading; everything else keeps the strict same-origin default.
+const strictHeaders = secureHeaders()
+const photoHeaders = secureHeaders({ crossOriginResourcePolicy: 'cross-origin' })
+app.use('*', (c, next) =>
+  c.req.path.startsWith('/api/properties/images/') ? photoHeaders(c, next) : strictHeaders(c, next)
+)
 app.use('*', cors({
   origin: (origin, c) => {
     const allowed = c.env?.CLIENT_URL ?? 'http://localhost:3000'
