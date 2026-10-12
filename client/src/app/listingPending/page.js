@@ -134,7 +134,7 @@ export default function ListingPending() {
                       </span>
                       <h1 className="text-2xl sm:text-3xl font-bold text-[var(--pg-text)] tracking-tight">Your listing is under review</h1>
                       <p className="mt-2 text-sm text-[var(--pg-text-tertiary)] leading-relaxed">
-                        Our team is reviewing your property. We'll verify and publish it within <strong className="text-[var(--pg-text)]">48 hours</strong>.
+                        Your PG is waiting for admin approval. It will appear in search once approved, usually within <strong className="text-[var(--pg-text)]">48 hours</strong>.
                       </p>
                     </>
                   )}
@@ -178,8 +178,7 @@ export default function ListingPending() {
                 <div className="space-y-3 mb-6">
                   {[
                     { label: "Listing submitted", done: true },
-                    { label: "Under team review (24–48 hrs)", done: false, active: true },
-                    { label: "Verification visit scheduled", done: false },
+                    { label: "Waiting for admin approval (24–48 hrs)", done: false, active: true },
                     { label: "Published & live on PG Connect", done: false },
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-3">
@@ -208,9 +207,9 @@ export default function ListingPending() {
                   <p className="text-xs font-bold uppercase tracking-widest text-[var(--pg-primary)] mb-2">What happens next?</p>
                   <ul className="space-y-1.5">
                     {[
-                      "You'll receive an email confirmation shortly.",
-                      "Our team will visit your property within 48 hours.",
-                      "Once verified, your listing goes live immediately.",
+                      "An admin reviews your listing details.",
+                      "Track its status any time in your Owner Dashboard.",
+                      "Once approved, your listing goes live in search.",
                     ].map((t) => (
                       <li key={t} className="flex items-start gap-2 text-xs text-blue-800">
                         <svg className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -231,10 +230,10 @@ export default function ListingPending() {
                     {isVerified && propertyId ? "View Property" : "Browse Properties"}
                   </button>
                   <button
-                    onClick={clearAndRelist}
+                    onClick={isVerified ? clearAndRelist : () => router.push("/ownersDashboard")}
                     className="flex-1 border border-[var(--pg-border)] hover:border-[var(--pg-border)] bg-white dark:bg-slate-800 text-[var(--pg-text)] text-sm font-semibold py-3 rounded-xl transition-all cursor-pointer"
                   >
-                    {isVerified ? "Create New Listing" : "Edit Submission"}
+                    {isVerified ? "Create New Listing" : "Go to Dashboard"}
                   </button>
                 </div>
 
