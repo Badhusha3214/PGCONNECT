@@ -3,6 +3,7 @@ import { getSupabase } from '../lib/supabase'
 import { authMiddleware, requireRole } from '../middleware/auth'
 import { currentMonthKey, computeRentStatus } from '../lib/rent'
 import { claimBedForRoom, releaseBed } from '../lib/beds'
+import { isListingLive } from '../lib/listing'
 import type { Env } from '../types'
 
 export const bookingsRouter = new Hono<Env>()
@@ -43,8 +44,8 @@ bookingsRouter.post('/', authMiddleware, requireRole('student', 'admin'), async 
     return c.json({ success: false, message: 'property_id, room_type, move_in_date, monthly_rent are required' }, 400)
   }
 
-  const { data: property } = await supabase.from('properties').select('status').eq('id', property_id).single()
-  if (!property || property.status !== 'verified') {
+  const { data: property } = await supabase.from('properties').select('status, listing_paid_until').eq('id', property_id).single()
+  if (!property || !isListingLive(property)) {
     return c.json({ success: false, message: 'Property is not available for booking' }, 400)
   }
 

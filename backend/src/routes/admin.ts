@@ -2,6 +2,8 @@ import { Hono } from 'hono'
 import { getSupabase } from '../lib/supabase'
 import { authMiddleware, requireRole } from '../middleware/auth'
 import { AGENT_BOUNTY_AMOUNT } from '../lib/commission'
+import { orSafe } from '../lib/postgrest'
+import { FREE_LISTING_SLOTS, FREE_LISTING_MONTHS } from '../lib/listing'
 import type { Env } from '../types'
 
 export const adminRouter = new Hono<Env>()
@@ -34,8 +36,8 @@ adminRouter.get('/stats', async (c) => {
     supabase.from('bookings').select('id', { count: 'exact', head: true }),
   ])
 
-  const { data: revenueData } = await supabase.from('payments').select('platform_revenue').eq('status', 'paid')
-  const totalRevenue = (revenueData ?? []).reduce((s: number, p: { platform_revenue: number }) => s + (p.platform_revenue ?? 0), 0)
+  const { data: totals } = await supabase.rpc('payment_totals').single<{ platform_revenue: number }>()
+  const totalRevenue = Number(totals?.platform_revenue ?? 0)
 
   return c.json({
     success: true,
@@ -137,6 +139,19 @@ adminRouter.patch('/properties/:id/verify', async (c) => {
 
   if (error) return c.json({ success: false, message: error.message }, 500)
 
+  // Going live: hand out a free launch slot if any remain. Otherwise the
+  // property stays hidden from search until the owner pays the listing fee.
+  let freeSlot = false
+  if (action === 'enable') {
+    const { data: claimed, error: slotError } = await supabase.rpc('claim_free_listing_slot', {
+      prop_id: data.id,
+      max_slots: FREE_LISTING_SLOTS,
+      free_months: FREE_LISTING_MONTHS,
+    })
+    if (slotError) console.error('[admin/verify] claim_free_listing_slot failed:', slotError.message)
+    freeSlot = claimed === true
+  }
+
   if (action === 'enable' && data.agent_id && !data.agent_bounty_paid) {
     const { data: agentProfile } = await supabase
       .from('profiles')
@@ -164,7 +179,12 @@ adminRouter.patch('/properties/:id/verify', async (c) => {
     }
   }
 
-  return c.json({ success: true, message: `Property ${action}d`, property: data })
+  const message = action !== 'enable'
+    ? 'Property disabled'
+    : freeSlot
+      ? 'Property enabled — free launch listing applied'
+      : 'Property enabled — it will appear in search once the owner pays the listing fee'
+  return c.json({ success: true, message, property: data, free_listing_slot: freeSlot })
 })
 
 // PATCH /api/admin/agents/:id/verify
@@ -200,7 +220,8 @@ adminRouter.get('/users', async (c) => {
     .select('*', { count: 'exact' })
 
   if (role) query = query.eq('role', role)
-  if (search) query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%`)
+  const term = search ? orSafe(search) : ''
+  if (term) query = query.or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
 
   const { data, count, error } = await query
     .order('created_at', { ascending: false })
@@ -271,12 +292,14 @@ adminRouter.get('/payments', async (c) => {
 
   if (error) return c.json({ success: false, message: error.message }, 500)
 
-  const { data: totals } = await supabase.from('payments').select('platform_revenue, owner_payout, referrer_commission').eq('status', 'paid')
-  const summary = (totals ?? []).reduce((acc: Record<string, number>, p: Record<string, number>) => ({
-    platform_revenue: acc.platform_revenue + (p.platform_revenue ?? 0),
-    owner_payouts: acc.owner_payouts + (p.owner_payout ?? 0),
-    referrer_commissions: acc.referrer_commissions + (p.referrer_commission ?? 0),
-  }), { platform_revenue: 0, owner_payouts: 0, referrer_commissions: 0 })
+  // Summed in SQL — pulling every paid row into the Worker doesn't scale.
+  const { data: totals } = await supabase.rpc('payment_totals').single<Record<string, number>>()
+  const summary = {
+    platform_revenue: Number(totals?.platform_revenue ?? 0),
+    owner_payouts: Number(totals?.owner_payouts ?? 0),
+    referrer_commissions: Number(totals?.referrer_commissions ?? 0),
+    agent_commissions: Number(totals?.agent_commissions ?? 0),
+  }
 
   return c.json({ success: true, total: count ?? 0, payments: data ?? [], summary })
 })

@@ -101,13 +101,20 @@ agentRouter.post('/request-payout', async (c) => {
     return c.json({ success: false, message: 'Minimum payout is ₹100. Current balance: ₹' + balance }, 400)
   }
 
-  // Reset balance and record the payout request (would trigger actual bank transfer via Razorpay Payouts)
-  const { error } = await supabase
+  // Reset balance and record the payout request (would trigger actual bank transfer via Razorpay Payouts).
+  // Conditional on the balance we just read, so two concurrent requests can't
+  // both pay out the same balance — the loser matches zero rows.
+  const { data: debited, error } = await supabase
     .from('profiles')
     .update({ commission_balance: 0 })
     .eq('id', user.id)
+    .eq('commission_balance', balance)
+    .select('id')
 
   if (error) return c.json({ success: false, message: error.message }, 500)
+  if (!debited?.length) {
+    return c.json({ success: false, message: 'Balance changed while processing — please try again' }, 409)
+  }
 
   return c.json({
     success: true,

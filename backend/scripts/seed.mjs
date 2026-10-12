@@ -74,13 +74,22 @@ async function getOrCreateAuthUser(userId, email) {
 
   if (!/already.*registered|already exists/i.test(error.message)) throw error
 
-  // Already exists from a previous seed run — look it up by email.
+  // Already exists from a previous run (or leftover from an earlier project
+  // state) — reset password + confirmation so SEED_PASSWORD always actually
+  // works, instead of silently keeping whatever credential the account had.
   let page = 1
   while (true) {
     const { data, error: listError } = await supabase.auth.admin.listUsers({ page, perPage: 200 })
     if (listError) throw listError
     const match = data.users.find((u) => u.email === email)
-    if (match) return match.id
+    if (match) {
+      const { error: updateError } = await supabase.auth.admin.updateUserById(match.id, {
+        password: SEED_PASSWORD,
+        email_confirm: true,
+      })
+      if (updateError) throw updateError
+      return match.id
+    }
     if (data.users.length < 200) break
     page += 1
   }
@@ -226,6 +235,114 @@ const properties = [
       { id: roomId(17), type: 'Double', price: 8000, total_beds: 3, description: 'AC twin sharing' },
     ],
   },
+  // ── Added dummy listings (append-only: bed numbering depends on order) ──
+  {
+    id: propId(11), owner: 'priya', name: 'Lakeview Ladies Hostel', tagline: 'Peaceful lakeside stay for students',
+    address: 'Punnamada', city: 'Alappuzha', state: 'Kerala', landmark: 'Near Punnamada Lake',
+    lat: 9.5076, lng: 76.3471,
+    gender: 'Girls', status: 'verified', amenities: ['wifi', 'meals', 'security', 'laundry'],
+    manager_name: 'Priya Nair', manager_phone: '9876500002',
+    rooms: [
+      { id: roomId(18), type: 'Double', price: 5500, total_beds: 4, description: 'Twin sharing with lake-facing windows' },
+      { id: roomId(19), type: 'Triple', price: 4200, total_beds: 6, description: 'Spacious triple sharing' },
+    ],
+  },
+  {
+    id: propId(12), owner: 'rajesh', name: 'Campus Corner PG', tagline: '2 minutes from Cochin University gate',
+    address: 'South Kalamassery', city: 'Kochi', state: 'Kerala', landmark: 'Near CUSAT Main Gate',
+    lat: 10.0436, lng: 76.3245,
+    gender: 'Boys', status: 'verified', amenities: ['wifi', 'meals', 'laundry'],
+    manager_name: 'Rajesh Kumar', manager_phone: '9876500001',
+    rooms: [
+      { id: roomId(20), type: 'Single', price: 7000, total_beds: 3, description: 'Single room with study desk' },
+      { id: roomId(21), type: 'Triple', price: 4000, total_beds: 9, description: 'Budget triple sharing' },
+    ],
+  },
+  {
+    id: propId(13), owner: 'priya', name: 'The Nest Co-living', tagline: 'Designer rooms, community events every weekend',
+    address: 'Panampilly Nagar', city: 'Kochi', state: 'Kerala', landmark: 'Near Panampilly Avenue',
+    lat: 9.9585, lng: 76.2950,
+    gender: 'Co-ed', status: 'verified', amenities: ['wifi', 'ac', 'gym', 'meals', 'security', 'laundry'],
+    manager_name: 'Priya Nair', manager_phone: '9876500002',
+    rooms: [
+      { id: roomId(22), type: 'Single', price: 12500, total_beds: 4, description: 'Premium AC single, attached bath' },
+      { id: roomId(23), type: 'Double', price: 9000, total_beds: 6, description: 'AC twin sharing with balcony' },
+    ],
+  },
+  {
+    id: propId(14), owner: 'rajesh', name: 'Medico Stay', tagline: 'Quiet stay for medical students',
+    address: 'Medical College Road', city: 'Thiruvananthapuram', state: 'Kerala', landmark: 'Near Govt Medical College',
+    lat: 8.5235, lng: 76.9278,
+    gender: 'Girls', status: 'verified', amenities: ['wifi', 'meals', 'security'],
+    manager_name: 'Rajesh Kumar', manager_phone: '9876500001',
+    rooms: [
+      { id: roomId(24), type: 'Double', price: 6500, total_beds: 6, description: 'Twin sharing, study hall access' },
+    ],
+  },
+  {
+    id: propId(15), owner: 'priya', name: 'Beach Road Residency', tagline: 'Sea breeze and city convenience',
+    address: 'Beach Road', city: 'Kozhikode', state: 'Kerala', landmark: 'Near Kozhikode Beach',
+    lat: 11.2560, lng: 75.7700,
+    gender: 'Co-ed', status: 'verified', amenities: ['wifi', 'ac', 'meals', 'security'],
+    manager_name: 'Priya Nair', manager_phone: '9876500002',
+    rooms: [
+      { id: roomId(25), type: 'Single', price: 8000, total_beds: 3, description: 'AC single, sea-facing' },
+      { id: roomId(26), type: 'Double', price: 6000, total_beds: 4, description: 'Twin sharing' },
+    ],
+  },
+  {
+    id: propId(16), owner: 'rajesh', name: 'NIT Gate Hostel', tagline: 'Built for NIT Calicut students',
+    address: 'Chathamangalam', city: 'Kozhikode', state: 'Kerala', landmark: 'Opposite NIT Calicut',
+    lat: 11.3216, lng: 75.9336,
+    gender: 'Boys', status: 'verified', amenities: ['wifi', 'meals', 'laundry', 'gym'],
+    manager_name: 'Rajesh Kumar', manager_phone: '9876500001',
+    rooms: [
+      { id: roomId(27), type: 'Double', price: 5000, total_beds: 8, description: 'Twin sharing, 24x7 wifi' },
+      { id: roomId(28), type: 'Triple', price: 3800, total_beds: 9, description: 'Triple sharing' },
+    ],
+  },
+  {
+    id: propId(17), owner: 'priya', name: 'Cultural Capital PG', tagline: 'Walk to Swaraj Round and colleges',
+    address: 'Chembukkavu', city: 'Thrissur', state: 'Kerala', landmark: 'Near St. Thomas College',
+    lat: 10.5310, lng: 76.2230,
+    gender: 'Girls', status: 'verified', amenities: ['wifi', 'meals', 'security', 'laundry'],
+    manager_name: 'Priya Nair', manager_phone: '9876500002',
+    rooms: [
+      { id: roomId(29), type: 'Single', price: 6800, total_beds: 2, description: 'Single room' },
+      { id: roomId(30), type: 'Double', price: 5200, total_beds: 6, description: 'Twin sharing' },
+    ],
+  },
+  {
+    id: propId(18), owner: 'rajesh', name: 'Hilltop Retreat PG', tagline: 'Cool climate, calm surroundings',
+    address: 'Kalpetta Town', city: 'Wayanad', state: 'Kerala', landmark: 'Near Kalpetta Bus Stand',
+    lat: 11.6085, lng: 76.0830,
+    gender: 'Co-ed', status: 'verified', amenities: ['wifi', 'meals'],
+    manager_name: 'Rajesh Kumar', manager_phone: '9876500001',
+    rooms: [
+      { id: roomId(31), type: 'Double', price: 4500, total_beds: 4, description: 'Twin sharing, hill view' },
+    ],
+  },
+  {
+    id: propId(19), owner: 'priya', name: 'Infopark Smart Stay', tagline: 'Shuttle to Infopark every 30 minutes',
+    address: 'Infopark Expressway', city: 'Kochi', state: 'Kerala', landmark: 'Near Infopark Phase 2',
+    lat: 10.0130, lng: 76.3620,
+    gender: 'Boys', status: 'verified', amenities: ['wifi', 'ac', 'meals', 'gym', 'security'],
+    manager_name: 'Priya Nair', manager_phone: '9876500002',
+    rooms: [
+      { id: roomId(32), type: 'Single', price: 10000, total_beds: 4, description: 'AC single with work desk' },
+      { id: roomId(33), type: 'Double', price: 7500, total_beds: 6, description: 'AC twin sharing' },
+    ],
+  },
+  {
+    id: propId(20), owner: 'rajesh', name: 'Kollam Coastal PG', tagline: 'Affordable stay near TKM College',
+    address: 'Karicode', city: 'Kollam', state: 'Kerala', landmark: 'Near TKM College of Engineering',
+    lat: 8.9142, lng: 76.6327,
+    gender: 'Boys', status: 'pending', amenities: ['wifi', 'meals'],
+    manager_name: 'Rajesh Kumar', manager_phone: '9876500001',
+    rooms: [
+      { id: roomId(34), type: 'Triple', price: 3500, total_beds: 6, description: 'Budget triple sharing' },
+    ],
+  },
 ]
 
 for (const p of properties) {
@@ -238,6 +355,9 @@ for (const p of properties) {
     gender: p.gender, amenities: p.amenities, starting_price: startingPrice,
     status: p.status, is_verified: p.status === 'verified', verified_at: p.status === 'verified' ? new Date().toISOString() : null,
     manager_name: p.manager_name, manager_phone: p.manager_phone, views: Math.floor(Math.random() * 200) + 20,
+    // Verified seed listings take a free launch slot, live for a year (migration 005).
+    free_listing_slot: p.status === 'verified',
+    listing_paid_until: p.status === 'verified' ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null,
   }, { onConflict: 'id' })
   if (propError) throw new Error(`property ${p.name}: ${propError.message}`)
 
@@ -248,6 +368,31 @@ for (const p of properties) {
     if (roomError) throw new Error(`room ${r.type} @ ${p.name}: ${roomError.message}`)
   }
 }
+
+console.log('Adding property photos...')
+
+const imageId = (n) => `30000000-0000-0000-0000-${String(n).padStart(12, '0')}`
+const PHOTOS = [
+  'photo-1522202176988-66273c2fd55f',
+  'photo-1545324418-cc1a3fa10c00',
+  'photo-1554995207-c18c203602cb',
+  'photo-1555041469-a586c61ea9bc',
+  'photo-1562774053-701939374585',
+  'photo-1618221195710-dd6b41faaea6',
+]
+let imageCounter = 1
+const imageRows = []
+properties.forEach((p, pi) => {
+  for (let pos = 0; pos < 3; pos++) {
+    const photo = PHOTOS[(pi + pos) % PHOTOS.length]
+    imageRows.push({
+      id: imageId(imageCounter++), property_id: p.id, position: pos,
+      image_key: `seed/${photo}`, image_url: `https://images.unsplash.com/${photo}?w=900&q=80`,
+    })
+  }
+})
+const { error: imagesError } = await supabase.from('property_images').upsert(imageRows, { onConflict: 'id' })
+if (imagesError) throw new Error(`images: ${imagesError.message}`)
 
 console.log('Provisioning beds (all vacant to start)...')
 
