@@ -8,11 +8,13 @@ export default function Gallery({ images, name }) {
   return (
     <div className="bg-[var(--pg-bg)]">
       <div className="relative h-[320px] w-full overflow-hidden sm:h-[420px]">
-        <AnimatePresence mode="wait">
+        {/* initial={false}: the first image renders visible (no fade-in from 0), so it can be the LCP element */}
+        <AnimatePresence mode="wait" initial={false}>
           <motion.img
             key={images[active]}
             src={images[active]}
             alt={name}
+            fetchPriority={active === 0 ? "high" : "auto"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -32,7 +34,7 @@ export default function Gallery({ images, name }) {
               className="h-20 w-full overflow-hidden rounded-xl border-2 cursor-pointer"
               style={{ borderColor: active === index ? "var(--pg-primary)" : "transparent" }}
             >
-              <img src={image} alt={`${name} image ${index + 1}`} className="h-full w-full object-cover" />
+              <img src={image} alt={`${name} image ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
             </motion.button>
           ))}
         </div>

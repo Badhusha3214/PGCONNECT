@@ -3,41 +3,11 @@ import { getSupabase } from '../lib/supabase'
 import { authMiddleware, requireRole } from '../middleware/auth'
 import { AGENT_RECURRING_RATE } from '../lib/commission'
 import { reclaimOrExtendBed, occupyBed, releaseBed, claimBedForRoom } from '../lib/beds'
+import { razorpayRequest, verifyRazorpaySignature } from '../lib/razorpay'
+import { settleListingPayment } from './listing'
 import type { Env } from '../types'
 
 export const paymentsRouter = new Hono<Env>()
-
-const razorpayRequest = async (env: Env['Bindings'], path: string, method: string, body?: unknown) => {
-  const auth = btoa(`${env.RAZORPAY_KEY_ID}:${env.RAZORPAY_KEY_SECRET}`)
-  const res = await fetch(`https://api.razorpay.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Basic ${auth}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-  return res.json() as Promise<Record<string, unknown>>
-}
-
-const verifyRazorpaySignature = async (
-  secret: string,
-  orderId: string,
-  paymentId: string,
-  signature: string
-): Promise<boolean> => {
-  const message = `${orderId}|${paymentId}`
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-  const sigBytes = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message))
-  const generated = Array.from(new Uint8Array(sigBytes)).map((b) => b.toString(16).padStart(2, '0')).join('')
-  return generated === signature
-}
 
 // POST /api/payments/create-order — tenant initiates monthly rent payment
 paymentsRouter.post('/create-order', authMiddleware, requireRole('student'), async (c) => {
@@ -304,6 +274,25 @@ paymentsRouter.post('/webhook', async (c) => {
   if (generated !== signature) return c.json({ error: 'Invalid signature' }, 400)
 
   const event = JSON.parse(rawBody)
+  const entity = event.payload?.payment?.entity
+
+  // Listing-fee orders: settle on capture (covers owners who close the tab
+  // before the client-side verify call), mark failed on failure. Identified
+  // by order id — Razorpay doesn't reliably copy order notes onto payments.
+  const supabaseForListing = getSupabase(c.env)
+  const { data: listingOrder } = entity?.order_id
+    ? await supabaseForListing.from('listing_payments').select('id').eq('razorpay_order_id', entity.order_id).maybeSingle()
+    : { data: null }
+  if (listingOrder) {
+    const supabase = supabaseForListing
+    if (event.event === 'payment.captured') {
+      await settleListingPayment(supabase, entity.order_id, entity.id)
+    } else if (event.event === 'payment.failed') {
+      await supabase.from('listing_payments').update({ status: 'failed' }).eq('razorpay_order_id', entity.order_id).eq('status', 'created')
+    }
+    return c.json({ success: true })
+  }
+
   if (event.event === 'payment.failed') {
     const supabase = getSupabase(c.env)
     const orderId = event.payload?.payment?.entity?.order_id

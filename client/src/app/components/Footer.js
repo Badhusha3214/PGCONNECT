@@ -1,80 +1,74 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
-const QUICK_LINKS = [
-  { label: "Browse PGs", href: "/propertys" },
-  { label: "List Your Property", href: "/listProperty" },
-  { label: "How It Works", href: "/how-it-works" },
-  { label: "Referral Program", href: "/how-it-works#referral" },
+const COLUMNS = [
+  {
+    title: "Students",
+    links: [
+      { label: "Find a bed", href: "/propertys" },
+      { label: "How it works", href: "/how-it-works" },
+      { label: "Referral program", href: "/how-it-works#referral" },
+    ],
+  },
+  {
+    title: "Parents",
+    links: [
+      { label: "How we verify", href: "/how-it-works#verification" },
+      { label: "Payments", href: "/help" },
+      { label: "FAQ", href: "/help" },
+    ],
+  },
+  {
+    title: "Owners",
+    links: [
+      { label: "List your PG", href: "/listProperty" },
+      { label: "Owner dashboard", href: "/ownersDashboard" },
+      { label: "Pricing", href: "/how-it-works#pricing" },
+    ],
+  },
 ];
 
-const OWNER_LINKS = [
-  { label: "Owner Dashboard", href: "/ownersDashboard" },
-  { label: "List a Property", href: "/listProperty" },
-  { label: "Pricing & Commission", href: "/how-it-works#pricing" },
-  { label: "Verification Process", href: "/how-it-works#verification" },
-];
-
-const SUPPORT_LINKS = [
-  { label: "Help Center", href: "/help" },
-  { label: "Contact Us", href: "/contact" },
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
+const LEGAL = [
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
+  { label: "Cookies", href: "/cookie-policy" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer style={{ background: "var(--pg-cta-bg)" }} className="text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
-          {/* Brand */}
-          <div>
-            <p className="text-xl font-bold text-white mb-2">PG Connect</p>
-            <p className="text-sm text-white/50 leading-relaxed">
-              Kerala's premier student PG marketplace. Find verified, affordable living spaces near your campus.
+    <footer style={{ background: "var(--pg-footer-bg)" }}>
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 pb-12 flex flex-col gap-10">
+        <div className="flex flex-wrap justify-between gap-10">
+          <div className="flex flex-col gap-3.5 max-w-[320px]">
+            <Logo size={34} />
+            <p className="m-0 text-[15px] leading-relaxed text-[var(--pg-text-secondary)]">
+              Verified paying-guest beds near colleges across Kerala, with real availability and transparent rent.
             </p>
+            <span className="ml text-base text-[var(--pg-terracotta)]" lang="ml">കേരളത്തിൽ നിന്ന്, സ്നേഹത്തോടെ</span>
           </div>
-
-          {/* Quick Links */}
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Quick Links</p>
-            <ul className="space-y-2.5">
-              {QUICK_LINKS.map((l) => (
-                <li key={l.label}>
-                  <Link href={l.href} className="text-sm text-white/60 hover:text-white transition-colors">{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* For Owners */}
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">For Owners</p>
-            <ul className="space-y-2.5">
-              {OWNER_LINKS.map((l) => (
-                <li key={l.label}>
-                  <Link href={l.href} className="text-sm text-white/60 hover:text-white transition-colors">{l.label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Support</p>
-            <ul className="space-y-2.5">
-              {SUPPORT_LINKS.map((l) => (
-                <li key={l.label}>
-                  <Link href={l.href} className="text-sm text-white/60 hover:text-white transition-colors">{l.label}</Link>
-                </li>
-              ))}
-            </ul>
+          <div className="grid gap-8 flex-[1_1_480px] max-w-[640px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+            {COLUMNS.map((col) => (
+              <nav key={col.title} aria-label={col.title} className="flex flex-col gap-2.5 text-[15px]">
+                <span className="font-bold mb-1 text-[var(--pg-ink)]">{col.title}</span>
+                {col.links.map((l) => (
+                  <Link key={l.label} href={l.href} className="text-[var(--pg-text-secondary)] no-underline hover:text-[var(--pg-terracotta)] transition-colors">
+                    {l.label}
+                  </Link>
+                ))}
+              </nav>
+            ))}
           </div>
         </div>
-
-        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <p className="text-xs text-white/40">&copy; {year} PG Connect. All rights reserved. Curated Student Living.</p>
-          <p className="text-xs text-white/30">Made with ♥ for Kerala students</p>
+        <div className="kasavu opacity-60" aria-hidden="true" />
+        <div className="flex flex-wrap justify-between gap-3 text-[13px] text-[var(--pg-text-tertiary)]">
+          <span>© {year} PG Connect · Kerala, India</span>
+          <span className="flex flex-wrap gap-5">
+            {LEGAL.map((l) => (
+              <Link key={l.label} href={l.href} className="text-[var(--pg-text-tertiary)] hover:text-[var(--pg-terracotta)]">{l.label}</Link>
+            ))}
+          </span>
         </div>
       </div>
     </footer>

@@ -12,6 +12,8 @@ import { referralRouter } from './routes/referral'
 import { agentRouter } from './routes/agent'
 import { paymentsRouter } from './routes/payments'
 import { reviewsRouter } from './routes/reviews'
+import { listingRouter } from './routes/listing'
+import { kycRouter } from './routes/kyc'
 import type { Env } from './types'
 
 const app = new Hono<Env>()
@@ -42,6 +44,8 @@ app.route('/api/referral', referralRouter)
 app.route('/api/agent', agentRouter)
 app.route('/api/payments', paymentsRouter)
 app.route('/api/reviews', reviewsRouter)
+app.route('/api/listing', listingRouter)
+app.route('/api/kyc', kycRouter)
 
 app.get('/api/health', (c) =>
   c.json({ success: true, message: 'PG Connect API is running', timestamp: new Date().toISOString() })
@@ -50,8 +54,9 @@ app.get('/api/health', (c) =>
 app.notFound((c) => c.json({ success: false, message: 'Route not found' }, 404))
 
 app.onError((err, c) => {
-  console.error('[Error]', err.message)
-  return c.json({ success: false, message: err.message ?? 'Internal server error' }, 500)
+  console.error('[Error]', err)
+  // Don't echo internal error text (SQL/driver details) back to clients.
+  return c.json({ success: false, message: 'Internal server error' }, 500)
 })
 
 export default app

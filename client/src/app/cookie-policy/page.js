@@ -1,6 +1,11 @@
+import { pageMetadata } from "../../lib/site";
 import LegalPage from "../components/LegalPage";
 
-export const metadata = { title: "Cookie Policy — PG Connect" };
+export const metadata = pageMetadata({
+  title: "Cookie Policy",
+  description: "Which cookies PG Connect uses and how you can control them.",
+  path: "/cookie-policy",
+});
 
 const SECTIONS = [
   {

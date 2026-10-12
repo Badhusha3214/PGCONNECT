@@ -1,5 +1,4 @@
 "use client";
-import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
@@ -7,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { createProperty, getCurrentUser } from "../api";
 import { supabase } from "../../lib/supabase";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 const AMENITIES = ["Wi-Fi", "AC", "Laundry", "Kitchen", "Security", "Gym"];
 const ROOM_TYPES = ["Default", "Single", "Double", "Triple", "More than 3"];
@@ -178,14 +178,6 @@ function ListPropertyForm() {
 
   return (
     <>
-      <Head>
-        <title>List Your Property — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-        <style>{`body { font-family: 'DM Sans', sans-serif; } .font-serif-display { font-family: 'DM Serif Display', serif; }`}</style>
-      </Head>
 
       <div className="min-h-screen bg-[var(--pg-bg)] text-[var(--pg-text)] flex flex-col">
         <Navbar />
@@ -574,24 +566,7 @@ function ListPropertyForm() {
           </div>
         </main>
 
-        <footer className="bg-white dark:bg-slate-800 border-t border-[var(--pg-border)] mt-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p className="font-serif-display text-base font-bold text-[var(--pg-text)]">PG Connect</p>
-              <p className="text-xs text-slate-500 mt-0.5">© 2024 PG Connect. Curated Student Living.</p>
-            </div>
-            <div className="flex flex-wrap gap-5">
-              {[
-                { label: "Privacy Policy", href: "/privacy" },
-                { label: "Terms of Service", href: "/terms" },
-                { label: "Help Center", href: "/help" },
-                { label: "Contact Us", href: "/contact" },
-              ].map((l) => (
-                <Link key={l.label} href={l.href} className="text-xs text-[var(--pg-text-tertiary)] hover:text-[var(--pg-primary)] transition-colors">{l.label}</Link>
-              ))}
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </>
   );

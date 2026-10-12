@@ -1,12 +1,10 @@
 "use client";
-import Head from "next/head";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getAllProperties } from "../api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { Stagger, StaggerItem } from "../components/Reveal";
 import { useDismissableOverlay } from "../../lib/useDismissableOverlay";
 
 const AMENITY_ICONS = {
@@ -99,7 +97,7 @@ const mapProperty = (property) => {
     price: Number(property?.starting_price ?? room?.price ?? 0),
     badge: property?.is_verified || property?.status === "verified" ? "VERIFIED" : null,
     badgeStyle: "",
-    badgeColor: "#06B6D4",
+    badgeColor: "#0F3B33",
     tag: availableBeds > 0 ? `${availableBeds} Beds Left` : "Full",
     tagColor: availableBeds > 0 ? "var(--pg-accent)" : "#64748b",
     availableBeds,
@@ -211,7 +209,6 @@ function SearchResultsContent() {
         setLoading(true);
         setError("");
         const response = await getAllProperties({ limit: 100 });
-        console.log(response);
         
         const list = Array.isArray(response?.properties) ? response.properties.map(mapProperty) : [];
 
@@ -248,7 +245,9 @@ function SearchResultsContent() {
       if (budgetActive && (p.price < budgetMin || p.price > budgetMax)) return false;
       if (roomTypes.length > 0 && !roomTypes.includes(p.roomType)) return false;
       if (gender !== "Any" && p.gender !== "Co-ed" && p.gender !== gender) return false;
-      if (amenities.length > 0 && !amenities.every((a) => p.amenities.includes(a))) return false;
+      // Chip labels ("Meals") and stored values ("meals", "Food") differ in
+      // wording/case, so compare their normalized keys.
+      if (amenities.length > 0 && !amenities.every((a) => p.amenityIcons.includes(getAmenityIconKey(a)))) return false;
       if (moveIn && p.availableBeds <= 0) return false;
       if (guests > 1 && p.availableBeds < guests) return false;
       const searchValue = search.toLowerCase();
@@ -423,31 +422,15 @@ function SearchResultsContent() {
 
   return (
     <>
-      <Head>
-        <title>Search PGs in {qLocation} — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-        <style>{`
-          body { font-family: 'DM Sans', sans-serif; }
-          .font-serif-display { font-family: 'DM Serif Display', serif; }
-          .no-scrollbar::-webkit-scrollbar { display: none; }
-          .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-          .card-img { transition: transform 0.4s ease; }
-          .pg-card:hover .card-img { transform: scale(1.05); }
-          select { appearance: none; }
-        `}</style>
-      </Head>
 
       <div className="min-h-screen flex flex-col" style={{ background: "var(--pg-bg)", color: "var(--pg-text)" }}>
 
         <Navbar />
 
         {/* ── SEARCH BAR ── */}
-        <div id="main-content" className="bg-white dark:bg-slate-800 border-b border-blue-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-5 py-3">
-            <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar">
+        <div id="main-content">
+          <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-8">
+            <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar bg-white rounded-[28px] p-2.5" style={{ boxShadow: "var(--pg-shadow-float)" }}>
 
               {/* Location + Near Me */}
               <div className="relative flex-1 min-w-[220px]">
@@ -536,7 +519,7 @@ function SearchResultsContent() {
 
               {/* Search */}
               <button onClick={() => { setDatesOpen(false); setGuestsOpen(false); setLanguageOpen(false); setPage(1); }}
-                className="shrink-0 flex items-center gap-2 text-white font-bold text-sm px-5 py-2 rounded-xl cursor-pointer transition-all active:scale-[0.98]" style={{ background: "var(--pg-accent)" }}>
+                className="btn-shine shrink-0 flex items-center gap-2 text-white font-bold text-[15px] px-6 min-h-[48px] rounded-full cursor-pointer" style={{ background: "var(--pg-terracotta)", boxShadow: "0 12px 28px -10px rgba(180,70,31,.7)" }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
@@ -585,7 +568,7 @@ function SearchResultsContent() {
         </div>
 
         {/* ── BODY ── */}
-        <div className="flex flex-1 max-w-7xl mx-auto w-full px-4 sm:px-5 py-6 gap-7">
+        <div className="flex flex-1 max-w-[1280px] mx-auto w-full px-4 sm:px-6 pt-10 pb-6 gap-7">
 
           {/* ── FILTER DRAWER ── */}
           <AnimatePresence>
@@ -618,11 +601,12 @@ function SearchResultsContent() {
 
             {/* Results header */}
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-6">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-[var(--pg-text)] tracking-tight">
-                  Found {filtered.length} PGs in {qLocation}
+              <div className="flex flex-col gap-3">
+                <span className="eyebrow">Find a PG</span>
+                <h1 className="display m-0 font-extrabold" style={{ fontSize: "clamp(34px, 4vw, 56px)", lineHeight: 1, letterSpacing: "-0.04em" }}>
+                  {loading ? "Finding beds…" : <>{filtered.length} PG{filtered.length === 1 ? "" : "s"} {search ? <>in <span style={{ color: "var(--pg-terracotta)" }}>{search}</span></> : <>across <span style={{ color: "var(--pg-terracotta)" }}>Kerala</span></>}</>}
                 </h1>
-                <p className="text-sm text-slate-500 mt-1">Curated living spaces for the modern student.</p>
+                <p className="m-0 text-base text-[var(--pg-text-secondary)]">Verified listings with real bed availability.</p>
               </div>
               {/* Sort */}
               <div className="flex items-center gap-2 shrink-0">
@@ -641,7 +625,7 @@ function SearchResultsContent() {
 
             {/* ── PROPERTY GRID ── */}
             {loading && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {[1, 2, 3, 4].map((item) => (
                   <div key={item} className="pg-skeleton h-[430px] rounded-2xl border border-slate-200 dark:border-slate-700" />
                 ))}
@@ -655,109 +639,56 @@ function SearchResultsContent() {
             )}
 
             {!loading && !error && (
-              <Stagger key={safePage} triggerOnMount className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 sm:gap-6" staggerChildren={0.07}>
+              <div key={safePage} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {paginated.map((p) => (
-                <StaggerItem key={p.id}>
-                <motion.div whileHover={{ y: -6 }} transition={{ duration: 0.25 }} className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer border h-full"
-                  style={{ borderColor: "var(--pg-border-soft)" }}
-                  onClick={() => router.push(`/property/${p.id}`)}>
-
-                  {/* Image */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-[var(--pg-bg)] group">
-                    <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" style={{ transitionTimingFunction: "cubic-bezier(.22,1,.36,1)" }} />
-
-                    {/* Badge top-left */}
-                    {p.badge && (
-                      <span className="absolute top-3 left-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full text-white" style={{ background: p.badgeColor || "#06B6D4" }}>
-                        {p.badge === "VERIFIED" && (
-                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                          </svg>
-                        )}
-                        {p.badge}
-                      </span>
-                    )}
-
-                    {/* Tag bottom-left */}
-                    {p.tag && (
-                      <span className="absolute bottom-3 left-3 text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full text-white" style={{ background: p.tagColor }}>
-                        {p.tag}
-                      </span>
-                    )}
-
-                    {/* Wishlist */}
-                    <motion.button
-                      whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+                <div key={p.id}>
+                <div className="lift bg-[var(--pg-surface)] rounded-[30px] p-2.5 flex flex-col h-full cursor-pointer" onClick={() => router.push(`/property/${p.id}`)}>
+                  <div className="relative h-[220px] rounded-[22px] overflow-hidden" style={{ background: "linear-gradient(160deg, #D59A6A 0%, #8C5A3C 100%)" }}>
+                    <img src={p.image} alt={p.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                    <span className="absolute top-3.5 left-3.5 z-[2] text-xs font-bold px-[11px] py-1.5 rounded-full" style={{ background: "rgba(255,255,255,.92)", color: "#10231F" }}>
+                      {p.gender === "Girls" || p.gender === "Boys" ? p.gender : "Co-ed"}
+                    </span>
+                    <span className="absolute bottom-3.5 left-3.5 z-[2] text-xs font-bold px-[11px] py-1.5 rounded-full text-white" style={{ background: p.availableBeds > 0 && p.availableBeds <= 2 ? "#B4461F" : "#10231F" }}>
+                      {p.availableBeds > 0 ? `${p.availableBeds} bed${p.availableBeds === 1 ? "" : "s"} left` : "Full right now"}
+                    </span>
+                    <button
                       onClick={(e) => toggleWishlist(e, p.id)}
                       aria-label={wishlist.includes(p.id) ? "Remove from wishlist" : "Add to wishlist"}
                       aria-pressed={wishlist.includes(p.id)}
-                      className="absolute top-3 right-3 w-11 h-11 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center shadow-md cursor-pointer"
+                      className="absolute top-2.5 right-2.5 z-[2] w-11 h-11 rounded-full grid place-items-center cursor-pointer"
+                      style={{ background: "rgba(255,255,255,.92)" }}
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24"
-                        fill={wishlist.includes(p.id) ? "#ef4444" : "none"}
-                        stroke={wishlist.includes(p.id) ? "#ef4444" : "#94a3b8"}
-                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={wishlist.includes(p.id) ? "#B4461F" : "none"} stroke={wishlist.includes(p.id) ? "#B4461F" : "#5B6762"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                       </svg>
-                    </motion.button>
+                    </button>
                   </div>
-
-                  {/* Card body */}
-                  <div className="p-4">
-                    {/* Name + rating */}
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h3 className="font-bold text-base leading-snug" style={{ color: "var(--pg-text)" }}>{p.name}</h3>
-                      {p.isNew ? (
-                        <span className="flex items-center gap-1 text-xs font-bold text-blue-500 whitespace-nowrap shrink-0">
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                          </svg>
-                          (New)
+                  <div className="px-3.5 pt-[18px] pb-3.5 flex flex-col gap-3.5 flex-1">
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <h3 className="display m-0 text-[21px] font-bold tracking-[-0.025em] truncate">{p.name}</h3>
+                        <span className="text-sm truncate" style={{ color: "#5B6762" }}>
+                          {p.distance || p.location}{p.distanceKm != null ? ` · ${p.distanceKm.toFixed(1)} km` : ""}
                         </span>
-                      ) : p.rating ? (
-                        <span className="flex items-center gap-1 text-xs font-bold whitespace-nowrap shrink-0" style={{ color: "var(--pg-text)" }}>
-                          <span style={{ color: "var(--pg-accent)" }}>★</span> {p.rating}
-                        </span>
-                      ) : null}
+                      </div>
+                      <div className="text-right flex flex-col gap-0.5 shrink-0">
+                        <span className="display text-[21px] font-extrabold whitespace-nowrap">{formatCurrency(p.price)}</span>
+                        <span className="text-xs whitespace-nowrap" style={{ color: "#5B6762" }}>per bed / month</span>
+                      </div>
                     </div>
-
-                    {/* Location */}
-                    <p className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
-                      <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-                      </svg>
-                      {p.location}{p.distance ? ` • ${p.distance}` : ""}{p.distanceKm != null ? ` • ${p.distanceKm.toFixed(1)} km away` : ""}
-                    </p>
-
-                    {/* Amenity pills */}
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {p.amenities.map((a, i) => (
-                        <span key={a} className="flex items-center gap-1 text-[11px] text-slate-600 dark:text-slate-400 bg-[var(--pg-bg)] px-2 py-1 rounded-full">
-                          {p.amenityIcons[i] && AMENITY_ICONS[p.amenityIcons[i]]}
-                          {a}
+                    <div className="flex flex-wrap gap-2 text-[13px] font-semibold mt-auto">
+                      {p.rating ? <span className="bg-white rounded-full px-3 py-[7px]"><span style={{ color: "#B4461F" }}>★</span> {Number(p.rating).toFixed(1)}</span> : null}
+                      {p.amenities.slice(0, 3).map((a, i) => (
+                        <span key={a} className="inline-flex items-center gap-1.5 bg-white rounded-full px-3 py-[7px] capitalize">
+                          {p.amenityIcons[i] && AMENITY_ICONS[p.amenityIcons[i]]}{a}
                         </span>
                       ))}
                     </div>
-
-                    {/* Price + CTA */}
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <span className="text-xl font-bold" style={{ color: "var(--pg-text)" }}>{formatCurrency(p.price)}</span>
-                        <span className="text-xs font-normal" style={{ color: "var(--pg-text-secondary)" }}> /month</span>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); router.push(`/property/${p.id}`); }}
-                        className="text-xs font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap border hover:bg-blue-50"
-                        style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}
-                      >
-                        View Details
-                      </button>
-                    </div>
                   </div>
-                </motion.div>
-                </StaggerItem>
+                </div>
+                </div>
               ))}
-              </Stagger>
+              </div>
             )}
 
             {!loading && !error && filtered.length === 0 && (

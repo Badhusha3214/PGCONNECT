@@ -1,5 +1,4 @@
 "use client";
-import Head from "next/head";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { getMyBookings, createPaymentOrder, verifyPayment, getPaymentHistory } from "../api";
@@ -103,7 +102,7 @@ export default function PaymentsPage() {
           }
         },
         prefill: { name: "", email: "", contact: "" },
-        theme: { color: "#2563eb" },
+        theme: { color: "#B4461F" },
         modal: { ondismiss: () => setPayingId(null) },
       };
 
@@ -120,12 +119,6 @@ export default function PaymentsPage() {
 
   return (
     <>
-      <Head>
-        <title>Payments — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-        <style>{`body { font-family: 'DM Sans', sans-serif; }`}</style>
-      </Head>
 
       <div className="min-h-screen bg-[var(--pg-bg)]">
         {/* Navbar */}

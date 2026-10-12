@@ -7,6 +7,8 @@ export type Env = {
     RAZORPAY_KEY_SECRET: string
     RAZORPAY_WEBHOOK_SECRET: string
     CLIENT_URL: string
+    RESEND_API_KEY?: string
+    EMAIL_FROM?: string
   }
   Variables: {
     user: UserProfile

@@ -1,6 +1,11 @@
+import { pageMetadata } from "../../lib/site";
 import LegalPage from "../components/LegalPage";
 
-export const metadata = { title: "Terms of Service — PG Connect" };
+export const metadata = pageMetadata({
+  title: "Terms of Service",
+  description: "The terms that govern using PG Connect to find, book and list PG accommodation.",
+  path: "/terms",
+});
 
 const SECTIONS = [
   {

@@ -23,3 +23,9 @@ RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
 # ─── App ─────────────────────────────────────────────────────────────────────
 # URL of the Next.js frontend (used for CORS)
 CLIENT_URL=http://localhost:3000
+
+# ─── Email (Resend) ──────────────────────────────────────────────────────────
+# Owner notifications for new inquiries. Leave blank to skip sending in dev.
+# Key: resend.com → API Keys. EMAIL_FROM must use a domain verified in Resend.
+RESEND_API_KEY=
+EMAIL_FROM=PG Connect <noreply@your-domain.com>

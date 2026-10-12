@@ -1,5 +1,5 @@
 "use client";
-import Head from "next/head";
+import { LogoMark } from "../components/Logo";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useDismissableOverlay } from "../../lib/useDismissableOverlay";
@@ -133,12 +133,6 @@ export default function ReferrerDashboard() {
 
   return (
     <>
-      <Head>
-        <title>Referrer Dashboard — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-        <style>{`body { font-family: 'DM Sans', sans-serif; overflow-x: hidden; } .font-serif-display { font-family: 'DM Serif Display', serif; }`}</style>
-      </Head>
 
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
 
@@ -149,9 +143,9 @@ export default function ReferrerDashboard() {
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <button onClick={() => router.push("/")} className="font-serif-display text-blue-600 text-base font-bold leading-tight lg:block hidden cursor-pointer">PG Connect</button>
+          <button onClick={() => router.push("/")} className="lg:block hidden cursor-pointer"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></button>
           <div className="lg:hidden">
-            <p className="font-serif-display text-blue-600 text-base font-bold">PG Connect</p>
+            <p className="font-serif-display text-blue-600 text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">

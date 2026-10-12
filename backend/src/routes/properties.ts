@@ -3,6 +3,9 @@ import { cache } from 'hono/cache'
 import { getSupabase } from '../lib/supabase'
 import { authMiddleware, requireRole } from '../middleware/auth'
 import { uploadToR2, deleteFromR2 } from '../lib/r2'
+import { normalizeCity, cityVariants } from '../lib/city'
+import { orSafe } from '../lib/postgrest'
+import { nowIso } from '../lib/listing'
 import type { Env } from '../types'
 
 export const propertiesRouter = new Hono<Env>()
@@ -12,37 +15,38 @@ export const propertiesRouter = new Hono<Env>()
 // cache key is just the URL, so it would leak one user's response to another.
 const publicCache = cache({ cacheName: 'pgconnect-properties', cacheControl: 'public, max-age=30' })
 
+const MAX_PAGE_SIZE = 100
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // GET /api/properties — public, with filters
 propertiesRouter.get('/', publicCache, async (c) => {
   const supabase = getSupabase(c.env)
   const { city, state, minPrice, maxPrice, gender, roomType, search, sort, page = '1', limit = '12' } = c.req.query()
 
-  let query = supabase
-    .from('properties')
-    .select(`
+  // Room-type filtering uses a second, !inner-joined alias of property_rooms so
+  // it filters in SQL (no giant `id IN (...)` list) while the plain
+  // property_rooms embed still returns every room type for display.
+  const columns: string = `
       id, name, address, city, state, landmark, lat, lng,
       amenities, gender, starting_price, rating, total_ratings,
-      status, is_verified, available_beds,
+      status, is_verified, available_beds, updated_at,
       property_images(image_url, position),
-      property_rooms(type)
-    `)
+      property_rooms(type)${roomType ? ', room_filter:property_rooms!inner(type)' : ''}
+    `
+  let query = supabase
+    .from('properties')
+    .select(columns, { count: 'exact' })
     .eq('status', 'verified')
+    .gt('listing_paid_until', nowIso())
 
-  if (city) query = query.ilike('city', `%${city}%`)
+  if (city) query = query.or(cityVariants(city).map((v) => `city.ilike.%${orSafe(v)}%`).join(','))
   if (state) query = query.ilike('state', `%${state}%`)
   if (gender) query = query.eq('gender', gender)
-  if (minPrice) query = query.gte('starting_price', Number(minPrice))
-  if (maxPrice) query = query.lte('starting_price', Number(maxPrice))
-  if (roomType) {
-    const { data: roomPropertyIds } = await supabase
-      .from('property_rooms')
-      .select('property_id')
-      .eq('type', roomType)
-    const ids = roomPropertyIds?.map((r: { property_id: string }) => r.property_id) ?? []
-    if (ids.length) query = query.in('id', ids)
-    else return c.json({ success: true, total: 0, page: 1, pages: 0, properties: [] })
-  }
-  if (search) query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%,address.ilike.%${search}%`)
+  if (minPrice && Number.isFinite(Number(minPrice))) query = query.gte('starting_price', Number(minPrice))
+  if (maxPrice && Number.isFinite(Number(maxPrice))) query = query.lte('starting_price', Number(maxPrice))
+  if (roomType) query = query.eq('room_filter.type', roomType)
+  const term = search ? orSafe(search) : ''
+  if (term) query = query.or(`name.ilike.%${term}%,city.ilike.%${term}%,state.ilike.%${term}%,address.ilike.%${term}%`)
 
   const sortMap: Record<string, { column: string; ascending: boolean }> = {
     price_asc: { column: 'starting_price', ascending: true },
@@ -53,8 +57,8 @@ propertiesRouter.get('/', publicCache, async (c) => {
   const s = sortMap[sort ?? 'newest'] ?? { column: 'created_at', ascending: false }
   query = query.order(s.column, { ascending: s.ascending })
 
-  const pageNum = Number(page)
-  const limitNum = Number(limit)
+  const pageNum = Math.max(1, Math.floor(Number(page)) || 1)
+  const limitNum = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.floor(Number(limit)) || 12))
   const from = (pageNum - 1) * limitNum
   const to = from + limitNum - 1
 
@@ -66,7 +70,32 @@ propertiesRouter.get('/', publicCache, async (c) => {
     total: count ?? 0,
     page: pageNum,
     pages: Math.ceil((count ?? 0) / limitNum),
-    properties: properties ?? [],
+    properties: ((properties ?? []) as unknown as Record<string, unknown>[]).map(({ room_filter: _, ...p }) => p),
+  })
+})
+
+// GET /api/properties/stats — real public numbers for the homepage.
+// Two narrow columns, edge-cached for 30 minutes, so this stays cheap.
+const statsCache = cache({ cacheName: 'pgconnect-stats', cacheControl: 'public, max-age=1800' })
+propertiesRouter.get('/stats', statsCache, async (c) => {
+  const supabase = getSupabase(c.env)
+  const { data, error } = await supabase
+    .from('properties')
+    .select('city, available_beds')
+    .eq('status', 'verified')
+    .gt('listing_paid_until', nowIso())
+    .limit(50000)
+
+  if (error) return c.json({ success: false, message: error.message }, 500)
+  const rows = (data ?? []) as { city: string | null; available_beds: number | null }[]
+  const cities = [...new Set(rows.map((r) => normalizeCity(r.city)).filter(Boolean))].sort()
+  return c.json({
+    success: true,
+    stats: {
+      listings: rows.length,
+      cities,
+      availableBeds: rows.reduce((sum, r) => sum + (r.available_beds ?? 0), 0),
+    },
   })
 })
 
@@ -89,7 +118,18 @@ propertiesRouter.get('/owner/mine', authMiddleware, requireRole('owner', 'admin'
 })
 
 // GET /api/properties/:id
-propertiesRouter.get('/:id', publicCache, async (c) => {
+// The view is recorded before the cache layer so cached hits still count, via
+// an atomic SQL increment (a read-then-write here would lose concurrent views).
+propertiesRouter.get('/:id', async (c, next) => {
+  const id = c.req.param('id')
+  if (!UUID_RE.test(id)) return c.json({ success: false, message: 'Property not found' }, 404)
+  c.executionCtx.waitUntil(
+    Promise.resolve(getSupabase(c.env).rpc('increment_property_views', { prop_id: id })).then(({ error }) => {
+      if (error) console.error('[properties/:id] increment_property_views failed:', error.message)
+    })
+  )
+  await next()
+}, publicCache, async (c) => {
   const supabase = getSupabase(c.env)
   const { data: property, error } = await supabase
     .from('properties')
@@ -103,11 +143,6 @@ propertiesRouter.get('/:id', publicCache, async (c) => {
     .single()
 
   if (error || !property) return c.json({ success: false, message: 'Property not found' }, 404)
-
-  // Don't make the visitor wait on this write — record the view in the background.
-  c.executionCtx.waitUntil(
-    Promise.resolve(supabase.from('properties').update({ views: (property.views ?? 0) + 1 }).eq('id', property.id))
-  )
 
   return c.json({ success: true, property })
 })
@@ -141,7 +176,7 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
       agent_code: formData.get('agent_code'),
       commission_option: formData.get('commission_option'),
     }
-    imageFiles = formData.getAll('images') as File[]
+    imageFiles = (formData.getAll('images') as unknown[]).filter((f): f is File => f instanceof File)
   } else {
     body = await c.req.json()
   }
@@ -195,7 +230,7 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
       name: body.name,
       tagline: body.tagline,
       address: body.address,
-      city: body.city,
+      city: normalizeCity(body.city),
       state: body.state,
       landmark: body.landmark,
       lat: body.lat,
@@ -267,6 +302,7 @@ propertiesRouter.patch('/:id', authMiddleware, async (c) => {
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]
   }
+  if (typeof updates.city === 'string') updates.city = normalizeCity(updates.city)
 
   if (existing.status === 'verified') {
     updates.status = 'pending'
