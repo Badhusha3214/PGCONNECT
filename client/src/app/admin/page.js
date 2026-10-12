@@ -1,5 +1,4 @@
 "use client";
-import Head from "next/head";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useDismissableOverlay } from "../../lib/useDismissableOverlay";
@@ -13,11 +12,15 @@ import {
   getAdminReviews,
   moderateReview,
   getAdminProperties,
+  getAdminPayments,
+  getAdminCommissions,
   getCurrentUser,
   updateProfile,
   updatePassword,
   logout,
 } from "../api";
+import KycReview from "./KycReview";
+import { LogoMark } from "../components/Logo";
 
 const VERIFICATION_STATUSES = [
   { value: "pending", label: "Pending" },
@@ -31,9 +34,20 @@ const NAV_ITEMS = [
   { label: "Users", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
   { label: "Agents", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><circle cx="7" cy="7" r="1.5" fill="currentColor" stroke="none"/></svg> },
   { label: "Verification", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+  { label: "Owner KYC", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="11" r="2.5" /><path d="M5.5 17c.6-1.8 2-2.8 3.5-2.8s2.9 1 3.5 2.8" /><line x1="15" y1="10" x2="19" y2="10" /><line x1="15" y1="14" x2="18" y2="14" /></svg> },
+  { label: "Payments", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg> },
   { label: "Reviews", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> },
   { label: "Settings", icon: <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> },
 ];
+
+const PAYMENT_STATUS_STYLES = {
+  paid: "bg-green-50 text-green-700 border-green-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  created: "bg-slate-50 text-slate-600 border-slate-200",
+  failed: "bg-red-50 text-red-700 border-red-200",
+  cancelled: "bg-red-50 text-red-700 border-red-200",
+  refunded: "bg-blue-50 text-blue-700 border-blue-200",
+};
 
 const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" };
 const PeopleIcon = ({ className }) => <svg className={className} {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
@@ -95,6 +109,14 @@ export default function AdminPanel() {
   const [verificationTotal, setVerificationTotal] = useState(0);
   const [verificationStatus, setVerificationStatus] = useState("pending");
   const [verificationActioningId, setVerificationActioningId] = useState(null);
+
+  const [paymentsView, setPaymentsView] = useState("transactions");
+  const [payments, setPayments] = useState([]);
+  const [paymentsTotal, setPaymentsTotal] = useState(0);
+  const [paymentsSummary, setPaymentsSummary] = useState(null);
+  const [commissions, setCommissions] = useState([]);
+  const [commissionsTotal, setCommissionsTotal] = useState(0);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
 
   const [settingsUser, setSettingsUser] = useState(null);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -173,6 +195,16 @@ export default function AdminPanel() {
     finally { setVerificationLoading(false); }
   };
 
+  const loadPayments = async () => {
+    try {
+      setPaymentsLoading(true);
+      const [p, c] = await Promise.all([getAdminPayments(), getAdminCommissions()]);
+      if (p.success) { setPayments(p.payments); setPaymentsTotal(p.total); setPaymentsSummary(p.summary); }
+      if (c.success) { setCommissions(c.commissions); setCommissionsTotal(c.total); }
+    } catch (e) { console.error("Payments error:", e); }
+    finally { setPaymentsLoading(false); }
+  };
+
   const loadSettings = async () => {
     try {
       setSettingsLoading(true);
@@ -200,6 +232,7 @@ export default function AdminPanel() {
     if (activeNav === "Reviews") loadReviews();
     if (activeNav === "Properties") loadAllProperties();
     if (activeNav === "Verification") loadVerificationQueue();
+    if (activeNav === "Payments") loadPayments();
     if (activeNav === "Settings") loadSettings();
   }, [activeNav]);
 
@@ -332,19 +365,6 @@ export default function AdminPanel() {
 
   return (
     <>
-      <Head>
-        <title>Admin Panel — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-        <style>{`
-          body { font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
-          .font-serif-display { font-family: 'DM Serif Display', serif; }
-          .sidebar-scroll::-webkit-scrollbar { display: none; }
-          .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-          @keyframes slide-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-          .slide-in { animation: slide-in 0.2s ease; }
-        `}</style>
-      </Head>
 
       <div className="min-h-screen flex flex-col" style={{ background: "var(--pg-bg)", color: "var(--pg-text)" }}>
 
@@ -418,7 +438,7 @@ export default function AdminPanel() {
             ${sidebarOpen ? "translate-x-0 slide-in" : "-translate-x-full lg:translate-x-0"}
           `}>
             <div className="hidden lg:block px-5 pt-5 pb-4 border-b border-blue-50">
-              <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}>PG Connect</p>
+              <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
               <p className="text-[9px] uppercase tracking-widest font-semibold mt-0.5" style={{ color: "var(--pg-text-tertiary)" }}>Admin Portal</p>
             </div>
             <div className="lg:hidden flex items-center justify-between px-5 pt-5 pb-4 border-b border-blue-50">
@@ -570,6 +590,8 @@ export default function AdminPanel() {
               )}
 
               {/* USERS TAB */}
+              {activeNav === "Owner KYC" && <KycReview />}
+
               {activeNav === "Users" && (
                 <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border" style={{ borderColor: "var(--pg-border-soft)" }}>
                   <div className="px-5 sm:px-6 py-4 border-b border-blue-50">
@@ -671,6 +693,124 @@ export default function AdminPanel() {
                       </table>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* PAYMENTS TAB */}
+              {activeNav === "Payments" && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {[
+                      { label: "Platform Revenue", value: paymentsSummary?.platform_revenue },
+                      { label: "Owner Payouts", value: paymentsSummary?.owner_payouts },
+                      { label: "Referrer Commissions", value: paymentsSummary?.referrer_commissions },
+                      { label: "Agent Commissions", value: paymentsSummary?.agent_commissions },
+                    ].map((card) => (
+                      <div key={card.label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border" style={{ borderColor: "var(--pg-border-soft)" }}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{card.label}</p>
+                        <p className="text-xl sm:text-2xl font-bold mt-1" style={{ color: "var(--pg-text)" }}>
+                          {paymentsLoading && !paymentsSummary ? "—" : formatCurrency(card.value ?? 0)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border" style={{ borderColor: "var(--pg-border-soft)" }}>
+                    <div className="px-5 sm:px-6 py-4 border-b border-blue-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h2 className="text-base font-bold" style={{ color: "var(--pg-text)" }}>
+                          {paymentsView === "transactions" ? `Transactions (${paymentsTotal})` : `Commissions (${commissionsTotal})`}
+                        </h2>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--pg-text-secondary)" }}>Totals above count paid transactions only.</p>
+                      </div>
+                      <div className="flex gap-2" role="group" aria-label="Ledger view">
+                        {[{ value: "transactions", label: "Transactions" }, { value: "commissions", label: "Commissions" }].map((v) => (
+                          <button
+                            key={v.value}
+                            onClick={() => setPaymentsView(v.value)}
+                            aria-pressed={paymentsView === v.value}
+                            className="text-xs font-bold px-3 py-2 min-h-[44px] sm:min-h-0 rounded-lg cursor-pointer transition-colors"
+                            style={paymentsView === v.value ? { background: "var(--pg-chip-bg)", color: "var(--pg-primary)" } : { color: "var(--pg-text-secondary)" }}>
+                            {v.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {paymentsLoading ? (
+                      <div className="px-6 py-8 text-sm text-slate-500 dark:text-slate-400">Loading payments...</div>
+                    ) : paymentsView === "transactions" ? (
+                      payments.length === 0 ? (
+                        <div className="px-6 py-8 text-sm text-slate-500 dark:text-slate-400">No transactions yet.</div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b border-slate-100 dark:border-slate-800">
+                                {["Tenant", "Property", "Month", "Amount", "Platform Fee", "Owner Payout", "Status", "Date"].map((h) => (
+                                  <th key={h} className="text-left text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 px-5 py-3 whitespace-nowrap">{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              {payments.map((p) => (
+                                <tr key={p.id} className="hover:bg-[var(--pg-bg)]/60 transition-colors">
+                                  <td className="px-5 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "var(--pg-text)" }}>{p.tenant ? `${p.tenant.first_name} ${p.tenant.last_name}` : "—"}</td>
+                                  <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{p.properties?.name || "—"}</td>
+                                  <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                    {p.month ? new Date(p.month).toLocaleDateString("en-IN", { month: "short", year: "numeric" }) : "—"}
+                                  </td>
+                                  <td className="px-5 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "var(--pg-text)" }}>{formatCurrency(p.amount)}</td>
+                                  <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatCurrency(p.platform_fee)}</td>
+                                  <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{formatCurrency(p.owner_payout)}</td>
+                                  <td className="px-5 py-3.5">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PAYMENT_STATUS_STYLES[p.status] || PAYMENT_STATUS_STYLES.created}`}>
+                                      {p.status.toUpperCase()}
+                                    </span>
+                                  </td>
+                                  <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                    {new Date(p.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )
+                    ) : commissions.length === 0 ? (
+                      <div className="px-6 py-8 text-sm text-slate-500 dark:text-slate-400">No commissions yet.</div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-slate-100 dark:border-slate-800">
+                              {["Earner", "Role", "Type", "Property", "Amount", "Status", "Date"].map((h) => (
+                                <th key={h} className="text-left text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 px-5 py-3 whitespace-nowrap">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {commissions.map((c) => (
+                              <tr key={c.id} className="hover:bg-[var(--pg-bg)]/60 transition-colors">
+                                <td className="px-5 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "var(--pg-text)" }}>{c.referrer ? `${c.referrer.first_name} ${c.referrer.last_name}` : "—"}</td>
+                                <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 capitalize">{c.role}</td>
+                                <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 capitalize">{c.type}</td>
+                                <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">{c.properties?.name || "—"}</td>
+                                <td className="px-5 py-3.5 text-sm font-semibold whitespace-nowrap" style={{ color: "var(--pg-text)" }}>{formatCurrency(c.amount)}</td>
+                                <td className="px-5 py-3.5">
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${PAYMENT_STATUS_STYLES[c.status] || PAYMENT_STATUS_STYLES.created}`}>
+                                    {c.status.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="px-5 py-3.5 text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                  {new Date(c.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -977,7 +1117,7 @@ export default function AdminPanel() {
 
               {/* Footer */}
               <div className="border-t pt-5 mt-8 flex items-center justify-between" style={{ borderColor: "var(--pg-border-soft)" }}>
-                <p className="text-sm font-bold" style={{ color: "var(--pg-primary)" }}>PG Connect</p>
+                <p className="text-sm font-bold" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
                 <p className="text-xs" style={{ color: "var(--pg-text-tertiary)" }}>&copy; {new Date().getFullYear()} PG Connect.</p>
               </div>
             </div>

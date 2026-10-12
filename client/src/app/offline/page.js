@@ -1,25 +1,22 @@
+import { LogoMark } from "../components/Logo";
+
 export const metadata = {
+  robots: { index: false, follow: false },
   title: "You're offline",
 };
 
 export default function OfflinePage() {
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center text-center px-6" style={{ color: "var(--pg-text)" }}>
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style={{ background: "var(--pg-bg)" }}>
-        <svg className="w-8 h-8" style={{ color: "var(--pg-primary)" }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="1" y1="1" x2="23" y2="23" />
-          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
-          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
-          <path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
-          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
-          <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-          <line x1="12" y1="20" x2="12.01" y2="20" />
-        </svg>
+    <div className="min-h-screen flex items-center justify-center px-6 bg-[var(--pg-bg)] text-[var(--pg-text)]">
+      <div className="max-w-[520px] w-full rounded-[36px] p-10 flex flex-col items-center text-center gap-5" style={{ background: "var(--pg-forest)", color: "#F5F3EE" }}>
+        <LogoMark size={48} />
+        <span className="mono text-[13px] tracking-[.14em]" style={{ color: "var(--pg-lamp)" }}>NO CONNECTION</span>
+        <h1 className="display m-0 text-4xl font-extrabold tracking-[-0.04em]">You&apos;re offline.</h1>
+        <p className="m-0 text-base" style={{ color: "rgba(245,243,238,.78)", lineHeight: 1.55 }}>
+          Check your connection and try again. Pages you&apos;ve already visited may still be available.
+        </p>
+        <div className="kasavu w-24 mt-2" aria-hidden="true" />
       </div>
-      <h1 className="text-xl font-bold">You&apos;re offline</h1>
-      <p className="text-sm mt-2" style={{ color: "var(--pg-text-secondary)" }}>
-        Check your connection and try again. Pages you&apos;ve already visited may still be available.
-      </p>
     </div>
   );
 }

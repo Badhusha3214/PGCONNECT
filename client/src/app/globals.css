@@ -1,97 +1,308 @@
 @import "tailwindcss";
 
-/* Keys off data-theme (set by ThemeToggle + the FOUC-prevention script in
-   layout.js) instead of prefers-color-scheme, so dark: utilities respond to
-   the user's manual toggle rather than only the OS setting. */
+/* Light-only site. Dark mode was removed in the 2026 redesign; this variant is
+   keyed to a data-theme that is never set, so leftover `dark:` utilities stay
+   inert instead of following the OS (Tailwind's default would). */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* ── Design tokens — "Landing page · 1440" mockup ─────────────────────────────
+   Cream paper, forest green, terracotta, kasavu gold and lamp-light yellow. */
 :root {
-  --pg-primary: #1D4ED8;
-  --pg-primary-dark: #1e40af;
-  --pg-accent: #F97316;
-  --pg-accent-dark: #ea6c0a;
-  --pg-bg: #EFF6FF;
-  --pg-surface: #FFFFFF;
-  --pg-text: #1E3A5F;
-  --pg-text-secondary: #1E3A5FBF;
-  --pg-text-tertiary: #1E3A5FB3;
-  --pg-border: #bfdbfe;
-  --pg-border-soft: #e0f2fe;
-  --pg-chip-bg: #dbeafe;
-  --pg-cta-bg: #1E3A5F; /* deliberately theme-invariant — a fixed dark promo band, not a surface */
-  --background: #EFF6FF;
-  --foreground: #1E3A5F;
-}
+  /* Brand palette */
+  --pg-ink: #10231F;          /* headings, dark buttons */
+  --pg-forest: #0F3B33;       /* logo tile, dark cards, floor plans */
+  --pg-forest-deep: #0B2B25;
+  --pg-terracotta: #B4461F;   /* primary actions, links */
+  --pg-terracotta-dark: #8E3415;
+  --pg-gold: #C99A2E;         /* kasavu rules, underlines */
+  --pg-gold-focus: #D99A1E;
+  --pg-lamp: #FFC447;         /* "free bed" glow, highlights */
+  --pg-lamp-soft: #FFD27A;
+  --pg-lamp-pale: #FFF1CC;
+  --pg-mint: #8FD3C7;
 
-:root[data-theme="dark"] {
-  --pg-primary: #60a5fa;
-  --pg-primary-dark: #3b82f6;
-  --pg-accent: #fb923c;
-  --pg-accent-dark: #f97316;
-  --pg-bg: #0f172a;
-  --pg-surface: #1e293b;
-  --pg-text: #e2e8f0;
-  --pg-text-secondary: #cbd5e1;
-  --pg-text-tertiary: #94a3b8;
-  --pg-border: #475569;
-  --pg-border-soft: #334155;
-  --pg-chip-bg: #1e3a8a;
-  --background: #0f172a;
-  --foreground: #e2e8f0;
+  /* Status */
+  --pg-success: #1F6B4A;
+  --pg-success-bg: #E9F5EE;
+  --pg-success-dot: #2E9E6B;
+  --pg-warn: #7A5300;
+  --pg-warn-bg: #FFF4D6;
+  --pg-danger: #8E3415;
+  --pg-danger-bg: #FCEDE6;
+
+  /* Semantic tokens — existing pages read these, so the whole site follows */
+  --pg-primary: var(--pg-terracotta);
+  --pg-primary-dark: var(--pg-terracotta-dark);
+  --pg-accent: var(--pg-forest);
+  --pg-accent-dark: var(--pg-forest-deep);
+  --pg-bg: #F5F3EE;
+  --pg-surface: #FFFFFF;
+  --pg-surface-muted: #F0EDE4;
+  --pg-text: #10231F;
+  --pg-text-secondary: #3E4E49;
+  --pg-text-tertiary: #5B6762;
+  --pg-border: #DCD7CA;
+  --pg-border-soft: #ECE8DE;
+  --pg-chip-bg: #F0EDE4;
+  --pg-cta-bg: #10231F;
+  --pg-footer-bg: #F5F3EE;
+  --pg-glow: var(--pg-lamp);
+  --background: #F5F3EE;
+  --foreground: #10231F;
+
+  --pg-shadow-card: 0 24px 50px -32px rgba(16, 35, 31, 0.3);
+  --pg-shadow-float: 0 30px 70px -30px rgba(16, 35, 31, 0.35), 0 1px 0 rgba(16, 35, 31, 0.06);
+
+  /* Tailwind's slate scale is used ~1,000 times across the app for neutrals;
+     warm it to the mockup's ink-and-paper greys so every page matches. */
+  --color-slate-50: #FAF8F3;
+  --color-slate-100: #F0EDE4;
+  --color-slate-200: #E3DED1;
+  --color-slate-300: #CBC5B6;
+  --color-slate-400: #8A9590;
+  --color-slate-500: #5B6762;
+  --color-slate-600: #3E4E49;
+  --color-slate-700: #2B3A36;
+  --color-slate-800: #1A2B27;
+  --color-slate-900: #10231F;
+  --color-slate-950: #0A1714;
+
+  /* The old brand blue becomes terracotta, so blue buttons/links/pills across
+     the app pick up the new primary without touching each file. */
+  --color-blue-50: #FCEDE6;
+  --color-blue-100: #F8DCCD;
+  --color-blue-200: #F0BFA6;
+  --color-blue-300: #E39A77;
+  --color-blue-400: #D27450;
+  --color-blue-500: #C2582F;
+  --color-blue-600: #B4461F;
+  --color-blue-700: #8E3415;
+  --color-blue-800: #6E2810;
+  --color-blue-900: #4F1C0B;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-figtree), sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-ml: var(--font-manjari), var(--font-figtree), sans-serif;
 }
+
+* { box-sizing: border-box; }
 
 body {
   background: var(--pg-bg);
   color: var(--pg-text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-@keyframes pg-blob-float {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(3%, -4%) scale(1.06); }
-  66% { transform: translate(-3%, 3%) scale(0.96); }
+button, input, select, textarea { font-family: inherit; }
+
+/* Site-wide: headings in the display face, and Tailwind's radius scale
+   softened to the mockup's rounder cards/buttons (applies to every page,
+   including dashboards that haven't been re-laid-out). */
+h1, h2, h3 { font-family: var(--font-bricolage), var(--font-figtree), sans-serif; letter-spacing: -0.02em; }
+:root {
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.375rem;
+  --radius-3xl: 1.875rem;
 }
 
-@keyframes pg-blob-float-alt {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-4%, 4%) scale(1.08); }
+:where(button, a, select, input, textarea, summary):focus-visible {
+  outline: 3px solid var(--pg-gold-focus);
+  outline-offset: 3px;
 }
 
-.pg-blob {
-  animation: pg-blob-float 14s ease-in-out infinite;
-  will-change: transform;
+input[type="range"] { accent-color: var(--pg-terracotta); }
+
+/* ── Type helpers ──────────────────────────────────────────────────────────── */
+.display { font-family: var(--font-bricolage), var(--font-figtree), sans-serif; }
+.mono { font-family: var(--font-jetbrains), ui-monospace, monospace; }
+.ml { font-family: var(--font-manjari), var(--font-figtree), sans-serif; }
+.eyebrow {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pg-terracotta);
 }
 
-.pg-blob-alt {
-  animation: pg-blob-float-alt 18s ease-in-out infinite;
-  will-change: transform;
+/* Kasavu double rule — gold border like a Kerala saree edge */
+.kasavu {
+  height: 7px;
+  border-top: 2px solid var(--pg-gold);
+  border-bottom: 1px solid var(--pg-gold);
 }
 
-@keyframes pg-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── Motion (all disabled under prefers-reduced-motion below) ──────────────── */
+.lift { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.35s; }
+.lift:hover { transform: translateY(-6px); box-shadow: 0 28px 60px -24px rgba(16, 35, 31, 0.35); }
+
+@keyframes pgcGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 196, 70, 0.6); } 50% { box-shadow: 0 0 0 10px rgba(255, 196, 70, 0); } }
+.bed-free { animation: pgcGlow 2.4s ease-in-out infinite; }
+
+@keyframes pgcPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.95; } }
+.glowdot { animation: pgcPulse 2.8s ease-in-out infinite; }
+.glowdot.d2 { animation-delay: 0.9s; }
+.glowdot.d3 { animation-delay: 1.7s; }
+
+@keyframes pgcRise { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: none; } }
+@supports (animation-timeline: view()) {
+  .reveal { animation: pgcRise both cubic-bezier(0.2, 0.7, 0.2, 1); animation-timeline: view(); animation-range: entry 0% cover 20%; }
 }
 
+/* Hero entrance: staggered rise + word-by-word reveal */
+.i1 { --i: 0s; } .i2 { --i: 0.08s; } .i3 { --i: 0.16s; } .i4 { --i: 0.24s; } .i5 { --i: 0.32s; }
+.i6 { --i: 0.45s; } .i7 { --i: 0.6s; } .i8 { --i: 0.75s; } .i9 { --i: 0.9s; } .i10 { --i: 1.1s; }
+@keyframes hin { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+.hin { opacity: 0; animation: hin 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--d, 0s) + var(--i, 0s)); }
+.hpop { opacity: 0; animation: hin 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards; animation-delay: calc(var(--d, 0s) + var(--i, 0s)); }
+.w { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.1em; margin-bottom: -0.1em; }
+.w > span { display: inline-block; transform: translateY(108%); animation: wordUp 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; animation-delay: calc(var(--d, 0s) + var(--i, 0s)); }
+@keyframes wordUp { to { transform: none; } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.uline path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.8s cubic-bezier(0.6, 0, 0.3, 1) forwards; animation-delay: calc(var(--d, 0s) + 0.95s); }
+.hdraw path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.6s cubic-bezier(0.6, 0, 0.3, 1) forwards; animation-delay: calc(var(--d, 0s) + 0.25s); }
+
+@keyframes scan { 0% { transform: translateX(0); opacity: 0; } 8% { opacity: 1; } 50% { transform: translateX(500px); opacity: 1; } 58%, 100% { transform: translateX(500px); opacity: 0; } }
+.scan { opacity: 0; animation: scan 5s cubic-bezier(0.5, 0, 0.5, 1) infinite; animation-delay: calc(var(--d, 0s) + 2s); }
+.march { stroke-dasharray: 3 9; animation: march 1s linear infinite; }
+@keyframes march { to { stroke-dashoffset: -12; } }
+.walker { opacity: 0; offset-path: path("M165 296 H 506 V 196"); offset-rotate: 0deg; animation: walk 5s cubic-bezier(0.45, 0, 0.3, 1) infinite; animation-delay: calc(var(--d, 0s) + 1.6s); }
+@keyframes walk { 0% { offset-distance: 0%; opacity: 0; } 8% { opacity: 1; } 70% { offset-distance: 100%; opacity: 1; } 85%, 100% { offset-distance: 100%; opacity: 0; } }
+.float { animation: float 6s ease-in-out infinite; }
+.float.f2 { animation-duration: 7.5s; animation-delay: -2s; }
+@keyframes float { 50% { transform: translateY(-12px); } }
+.ripple { animation: ripple 3s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+.ripple.r2 { animation-delay: 1.5s; }
+@keyframes ripple { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(1.6); opacity: 0; } }
+.ripple-svg { transform-box: fill-box; transform-origin: center; animation: ripple2 3.6s cubic-bezier(0.2, 0.6, 0.3, 1) infinite; }
+.ripple-svg.r2 { animation-delay: 1.2s; } .ripple-svg.r3 { animation-delay: 2.4s; }
+@keyframes ripple2 { 0% { transform: scale(0.1); opacity: 0.85; } 100% { transform: scale(3); opacity: 0; } }
+
+.marquee { overflow: hidden; }
+.mq-track { display: flex; align-items: center; gap: 40px; width: max-content; animation: mq 45s linear infinite; }
+.marquee:hover .mq-track { animation-play-state: paused; }
+@keyframes mq { to { transform: translateX(-50%); } }
+
+.seq { animation: seq 3.6s ease-in-out infinite; }
+.seq.s2 { animation-delay: 1.2s; } .seq.s3 { animation-delay: 2.4s; }
+@keyframes seq { 0%, 100% { background: transparent; box-shadow: none; } 25%, 55% { background: #FFD27A; box-shadow: 0 0 40px rgba(255, 196, 71, 0.55); } }
+
+/* Scroll progress bar (browsers without scroll-timeline simply don't show it) */
+.progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: var(--pg-gold); transform-origin: left; transform: scaleX(0); z-index: 60; }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@supports (animation-timeline: scroll()) {
+  .progress { animation: grow linear both; animation-timeline: scroll(root); }
+}
+.rule-draw { transform-origin: left; }
+@supports (animation-timeline: view()) {
+  .rule-draw { animation: grow both cubic-bezier(0.6, 0, 0.3, 1); animation-timeline: view(); animation-range: entry 0% cover 30%; }
+}
+
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.38), transparent); animation: shine 3.5s ease-in-out infinite; animation-delay: calc(var(--d, 0s) + 1.5s); }
+@keyframes shine { 0% { left: -60%; } 40%, 100% { left: 130%; } }
+
+.dots {
+  background-image: radial-gradient(rgba(16, 35, 31, 0.14) 1.2px, transparent 1.5px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse at 72% 42%, #000 0, transparent 62%);
+  mask-image: radial-gradient(ellipse at 72% 42%, #000 0, transparent 62%);
+}
+
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details[open] .faq-plus { transform: rotate(45deg); }
+
+/* ── Kept from before: skeletons + legacy helpers still used by some pages ── */
+@keyframes pg-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .pg-skeleton {
   background: linear-gradient(90deg, var(--pg-bg) 25%, var(--pg-border-soft) 37%, var(--pg-bg) 63%);
   background-size: 400% 100%;
   animation: pg-shimmer 1.6s ease-in-out infinite;
 }
+@keyframes pg-blob-float { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(3%, -4%) scale(1.06); } 66% { transform: translate(-3%, 3%) scale(0.96); } }
+@keyframes pg-blob-float-alt { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-4%, 4%) scale(1.08); } }
+.pg-blob { animation: pg-blob-float 14s ease-in-out infinite; will-change: transform; }
+.pg-blob-alt { animation: pg-blob-float-alt 18s ease-in-out infinite; will-change: transform; }
+@keyframes pg-gradient-pan { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.pg-gradient-animated { background-size: 200% 200%; animation: pg-gradient-pan 8s ease infinite; }
+@keyframes pg-rise { from { transform: translateY(14px); } to { transform: none; } }
+.pg-rise { animation: pg-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-@keyframes pg-gradient-pan {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+/* ── Curated collections, city cards, referral flow (landing v2 mockup) ───── */
+.coll { position: relative; overflow: hidden; text-decoration: none; border-radius: 30px; min-height: 340px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
+.coll .arrow { transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.coll:hover .arrow { transform: rotate(-45deg); }
+.city { position: relative; overflow: hidden; text-decoration: none; border-radius: 28px; min-height: 260px; padding: 22px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; color: #FFFFFF; }
+.city .zoom { position: absolute; inset: 0; transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1); background-size: cover; background-position: center; }
+.city:hover .zoom { transform: scale(1.07); }
+.flow { position: relative; height: 2px; flex: 1 1 40px; min-width: 40px; background-image: linear-gradient(90deg, rgba(16, 35, 31, 0.3) 0 6px, transparent 6px 12px); background-size: 12px 2px; }
+.flow > span { position: absolute; top: -5px; left: 0; width: 12px; height: 12px; border-radius: 99px; background: #FFC447; box-shadow: 0 0 12px #FFC447; animation: flow 2.4s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
+.flow.f2 > span { animation-delay: 1.2s; }
+@keyframes flow { 0% { left: 0; opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } 100% { left: calc(100% - 12px); opacity: 0; } }
+
+/* ── Intro loader (first visit per session; see home/IntroLoader.js) ─────── */
+@property --pct { syntax: "<integer>"; inherits: true; initial-value: 0; }
+.intro-on { --d: 3.05s; }
+html[data-intro="seen"] .intro-on { --d: 0s; }
+html[data-intro="seen"] .ld { display: none; }
+.ld { position: fixed; inset: 0; z-index: 100; pointer-events: none; animation: ldOff 0s linear 3.45s forwards; }
+@keyframes ldOff { to { visibility: hidden; } }
+.ld-panel { position: absolute; left: 0; right: 0; height: 50.5%; background: #0B2B25; }
+.ld-top { top: 0; animation: ldUp 0.85s cubic-bezier(0.75, 0, 0.2, 1) 2.6s forwards; }
+.ld-bot { bottom: 0; animation: ldDown 0.85s cubic-bezier(0.75, 0, 0.2, 1) 2.6s forwards; }
+@keyframes ldUp { to { transform: translateY(-101%); } }
+@keyframes ldDown { to { transform: translateY(101%); } }
+.ld-rain { position: absolute; inset: -30%; transform: rotate(14deg); opacity: 0; background-image: linear-gradient(180deg, transparent 0 62%, rgba(143, 211, 199, 0.6) 62% 100%); background-size: 100% 120px; -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 29px); mask-image: repeating-linear-gradient(90deg, #000 0 1px, transparent 1px 29px); animation: ldRain 0.5s linear infinite, ldFadeIn 0.6s ease forwards, ldFadeOut 0.3s ease 2.45s forwards; }
+.ld-rain.r2 { background-size: 100% 170px; -webkit-mask-image: repeating-linear-gradient(90deg, transparent 0 13px, #000 13px 14px, transparent 14px 47px); mask-image: repeating-linear-gradient(90deg, transparent 0 13px, #000 13px 14px, transparent 14px 47px); animation: ldRain2 0.75s linear infinite, ldFadeIn 0.6s ease 0.1s forwards, ldFadeOut 0.3s ease 2.45s forwards; }
+@keyframes ldRain { to { background-position: 0 120px; } }
+@keyframes ldRain2 { to { background-position: 0 170px; } }
+@keyframes ldFadeIn { to { opacity: 0.5; } }
+@keyframes ldFadeOut { from { opacity: 0.5; } to { opacity: 0; } }
+.ld-inner { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; color: #F5F3EE; padding: 24px; animation: ldInnerOut 0.45s cubic-bezier(0.6, 0, 0.4, 1) 2.35s forwards; }
+@keyframes ldInnerOut { to { opacity: 0; transform: scale(1.08); filter: blur(6px); } }
+.ld-wall path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 1.1s cubic-bezier(0.6, 0, 0.3, 1) 0.25s forwards; }
+.ld-bed { opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.4); animation: ldPop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) forwards; }
+@keyframes ldPop { to { opacity: 1; transform: scale(1); } }
+.ld-mine { animation: ldPop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) 1.3s forwards, ldLight 0.4s ease 1.85s forwards; }
+@keyframes ldLight { to { fill: #FFD27A; stroke: #FFF0C9; } }
+.ld-halo { transform-box: fill-box; transform-origin: center; opacity: 0; animation: ldHalo 1s ease-out 1.85s forwards; }
+@keyframes ldHalo { 0% { opacity: 0.9; transform: scale(0.3); } 100% { opacity: 0; transform: scale(3.4); } }
+.ld-count { font-family: var(--font-jetbrains), monospace; font-size: 13px; letter-spacing: 0.18em; color: #FFC447; min-width: 4ch; animation: ldCount 2.1s cubic-bezier(0.3, 0.1, 0.2, 1) 0.2s forwards; }
+.ld-count::after { counter-reset: p var(--pct); content: counter(p) "%"; }
+@keyframes ldCount { to { --pct: 100; } }
+.ld-msgs { display: grid; text-align: center; }
+.ld-msgs > span { grid-area: 1 / 1; opacity: 0; }
+.ld-m1 { animation: ldMsg 0.85s ease 0.2s forwards; }
+.ld-m2 { animation: ldMsg 0.85s ease 1.05s forwards; }
+.ld-m3 { animation: ldMsgIn 0.4s ease 1.9s forwards; }
+@keyframes ldMsg { 0% { opacity: 0; transform: translateY(10px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-10px); } }
+@keyframes ldMsgIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.ld-seam { position: absolute; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: #FFC447; box-shadow: 0 0 24px #FFC447; transform: scaleX(0); animation: ldSeam 0.45s cubic-bezier(0.6, 0, 0.2, 1) 2.2s forwards, ldSeamOut 0.3s ease 2.8s forwards; }
+@keyframes ldSeam { to { transform: scaleX(1); } }
+@keyframes ldSeamOut { to { opacity: 0; } }
+.ld-bar { width: 180px; height: 2px; background: rgba(255, 255, 255, 0.14); border-radius: 2px; overflow: hidden; }
+.ld-bar > span { display: block; height: 100%; background: #FFC447; transform: scaleX(0); transform-origin: left; animation: ldSeam 2.1s cubic-bezier(0.3, 0.1, 0.2, 1) 0.2s forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ld { display: none; }
+  .intro-on { --d: 0s; }
+  .flow > span { animation: none; }
 }
 
-.pg-gradient-animated {
-  background-size: 200% 200%;
-  animation: pg-gradient-pan 8s ease infinite;
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .bed-free, .glowdot, .pg-rise, .pg-blob, .pg-blob-alt, .pg-gradient-animated { animation: none; }
+  .hin, .hpop { opacity: 1; animation: none; }
+  .w > span { transform: none; animation: none; }
+  .hdraw path, .uline path { stroke-dashoffset: 0; animation: none; }
+  .mq-track, .scan, .walker, .float, .ripple, .ripple-svg, .seq, .march, .btn-shine::after { animation: none; }
+  .lift, .lift:hover { transition: none; transform: none; }
 }

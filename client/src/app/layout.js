@@ -1,29 +1,23 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Figtree, Manjari, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import PwaInstall from "./components/PwaInstall";
+import { SITE_URL, DEFAULT_OG_IMAGE } from "../lib/site";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+// Design system fonts: Bricolage Grotesque (headings), Figtree (body),
+// Manjari (Malayalam), JetBrains Mono (labels). Exposed as CSS variables
+// that globals.css maps to .display / .ml / .mono and Tailwind's font-*.
+const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"], weight: ["400", "600", "700", "800"], display: "swap" });
+const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
+const manjari = Manjari({ variable: "--font-manjari", subsets: ["latin", "malayalam"], weight: ["400", "700"], display: "swap" });
+const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin"], weight: ["500"], display: "swap" });
 
 export const metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "PG Connect | Verified PGs and Co-living Spaces",
     template: "%s | PG Connect",
   },
   description: "Find verified PGs and co-living spaces with transparent pricing, room availability, amenities, and manager details.",
-  alternates: {
-    canonical: "/",
-  },
   robots: {
     index: true,
     follow: true,
@@ -38,15 +32,16 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "/",
     siteName: "PG Connect",
     title: "PG Connect | Verified PGs and Co-living Spaces",
     description: "Compare verified PG listings, amenities, pricing, and availability in one place.",
+    images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "PG Connect | Verified PGs and Co-living Spaces",
     description: "Compare verified PG listings, amenities, pricing, and availability in one place.",
+    images: [DEFAULT_OG_IMAGE.url],
   },
   category: "real-estate",
   appleWebApp: {
@@ -63,30 +58,16 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1D4ED8",
+  themeColor: "#F5F3EE",
 };
-
-const THEME_INIT_SCRIPT = `
-(function() {
-  try {
-    var stored = localStorage.getItem('pg-theme');
-    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-  } catch (e) {}
-})();
-`;
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${bricolage.variable} ${figtree.variable} ${manjari.variable} ${jetbrains.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        {/* Runs before paint so the theme is correct on first render — no flash of the wrong theme. */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <a
           href="#main-content"

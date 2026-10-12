@@ -269,3 +269,57 @@ export const verifyAgent = async (agentId, action) => {
     body: JSON.stringify({ action }),
   })
 }
+
+// ── LISTING FEE ───────────────────────────────────────────────────────────────
+export const getListingConfig = async () => {
+  const res = await fetch(`${BASE_URL}/api/listing/config`)
+  return res.json()
+}
+
+export const createListingOrder = async (propertyId) => {
+  return authFetch(`/api/listing/${propertyId}/create-order`, { method: 'POST' })
+}
+
+export const verifyListingPayment = async (paymentData) => {
+  return authFetch('/api/listing/verify', { method: 'POST', body: JSON.stringify(paymentData) })
+}
+
+// ── OWNER KYC ─────────────────────────────────────────────────────────────────
+export const uploadKycDocument = async (docType, file) => {
+  const form = new FormData()
+  form.append('doc_type', docType)
+  form.append('file', file)
+  return authFetchForm('/api/kyc', form)
+}
+
+export const getMyKycDocuments = async () => {
+  return authFetch('/api/kyc/mine')
+}
+
+export const deleteKycDocument = async (docId) => {
+  return authFetch(`/api/kyc/${docId}`, { method: 'DELETE' })
+}
+
+export const getKycQueue = async (status = 'pending') => {
+  return authFetch(`/api/kyc/admin/queue?status=${encodeURIComponent(status)}`)
+}
+
+export const reviewKycDocument = async (docId, action, reason) => {
+  return authFetch(`/api/kyc/${docId}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action, reason }),
+  })
+}
+
+// KYC files are private: fetched with the auth header and opened as a blob
+// URL in a new tab — they are never reachable by a plain link.
+export const openKycDocument = async (docId) => {
+  const token = await getAuthToken()
+  const res = await fetch(`${BASE_URL}/api/kyc/${docId}/file`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error('Could not open document')
+  const url = URL.createObjectURL(await res.blob())
+  window.open(url, '_blank', 'noopener')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}

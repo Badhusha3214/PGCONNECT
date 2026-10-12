@@ -1,5 +1,4 @@
 "use client";
-import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -15,7 +14,11 @@ import {
   updateProfile,
   updatePassword,
   logout,
+  getListingConfig,
 } from "../api";
+import ListingStatus from "./ListingStatus";
+import KycSection from "./KycSection";
+import { LogoMark } from "../components/Logo";
 
 const BOOKING_STATUS_STYLES = {
   pending: "bg-amber-50 text-amber-700 border border-amber-200",
@@ -66,6 +69,7 @@ export default function OwnerDashboard() {
   const [userLoading, setUserLoading] = useState(true);
 
   const [properties, setProperties] = useState([]);
+  const [listingFee, setListingFee] = useState(1000);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
 
   const [inquiries, setInquiries] = useState([]);
@@ -145,6 +149,7 @@ export default function OwnerDashboard() {
     loadUser();
     loadProperties();
     loadInquiries();
+    getListingConfig().then((cfg) => { if (mounted && cfg?.fee) setListingFee(cfg.fee); }).catch(() => {});
 
     return () => {
       mounted = false;
@@ -292,6 +297,16 @@ export default function OwnerDashboard() {
     }
   };
 
+  // Re-fetch after a listing payment so the new expiry shows immediately.
+  const reloadProperties = async () => {
+    try {
+      const data = await getOwnerProperties();
+      if (data.success) setProperties(data.properties || []);
+    } catch (err) {
+      console.error("Failed to reload properties:", err);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     router.push("/");
@@ -315,21 +330,6 @@ export default function OwnerDashboard() {
 
   return (
     <>
-      <Head>
-        <title>Owner Dashboard — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-        <style>{`
-          body { font-family: 'DM Sans', sans-serif; overflow-x: hidden; }
-          .font-serif-display { font-family: 'DM Serif Display', serif; }
-          .sidebar-scroll::-webkit-scrollbar { display: none; }
-          .sidebar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-          @keyframes slide-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
-          .slide-in { animation: slide-in 0.25s ease; }
-        `}</style>
-      </Head>
 
       <div className="min-h-screen flex flex-col" style={{ background: "var(--pg-bg)", color: "var(--pg-text)" }}>
 
@@ -342,7 +342,7 @@ export default function OwnerDashboard() {
           </button>
 
           <div className="lg:hidden">
-            <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}>PG Connect</p>
+            <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
           </div>
 
           <div className="hidden lg:flex items-center gap-1 ml-4">
@@ -402,14 +402,14 @@ export default function OwnerDashboard() {
           `}>
             <div className="hidden lg:block px-5 pt-6 pb-4">
               <button onClick={() => router.push("/")} className="cursor-pointer">
-                <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}>PG Connect</p>
+                <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Owner Portal</p>
               </button>
             </div>
 
             <div className="lg:hidden flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <p className="font-serif-display text-[var(--pg-primary)] text-base font-bold">PG Connect</p>
+                <p className="font-serif-display text-[var(--pg-primary)] text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-semibold">Owner Portal</p>
               </div>
               <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className="p-3 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400">
@@ -545,7 +545,7 @@ export default function OwnerDashboard() {
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl mb-6 overflow-hidden">
                   <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
                     <h2 className="text-lg font-bold text-[var(--pg-text)]">Your Properties</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">How many people have viewed and liked each listing.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Listing status, views and likes for each property.</p>
                   </div>
                   {propertiesLoading ? (
                     <div className="px-5 sm:px-6 py-6 text-sm text-slate-500 dark:text-slate-400">Loading properties...</div>
@@ -563,6 +563,7 @@ export default function OwnerDashboard() {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-[var(--pg-text)] truncate">{p.name}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{p.city}</p>
+                            <ListingStatus property={p} fee={listingFee} onPaid={reloadProperties} />
                           </div>
                           <div className="flex items-center gap-5 shrink-0">
                             <div className="flex items-center gap-1.5" title="Views">
@@ -789,6 +790,7 @@ export default function OwnerDashboard() {
             {/* SETTINGS TAB */}
             {activeNav === "Settings" && (
               <div className="space-y-6 max-w-xl">
+                <KycSection />
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
                   <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
                     <h2 className="text-lg font-bold text-[var(--pg-text)]">Account</h2>
@@ -885,7 +887,7 @@ export default function OwnerDashboard() {
             <footer className="border-t border-slate-200 dark:border-slate-700 pt-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <p className="font-serif-display text-sm font-bold text-[var(--pg-text)]">PG Connect</p>
+                  <p className="font-serif-display text-sm font-bold text-[var(--pg-text)]"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">© {new Date().getFullYear()} PG Connect. Curated Student Living.</p>
                 </div>
                 <div className="flex flex-wrap gap-5">

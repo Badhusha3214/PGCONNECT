@@ -1,89 +1,60 @@
-"use client";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import PageHero from "../components/PageHero";
+import { FAQ_GROUPS } from "./faqs";
 
-const FAQ_GROUPS = [
-  {
-    group: "For Students",
-    items: [
-      { q: "How do I search for a PG?", a: "Use the search bar on the homepage or go to Explore to filter by budget, gender preference, room type, and city. You can sort results by price or rating." },
-      { q: "How do I contact an owner about a listing?", a: "Open any property's detail page and use the \"Send Inquiry\" form. The owner receives your message directly and can follow up with you." },
-      { q: "Can I save listings to look at later?", a: "Yes — click the heart icon on any property card to add it to your saved list." },
-      { q: "How does the referral program work?", a: "Every student gets a unique referral code. Share it with a PG owner — when they list a property and start receiving rent payments through PG Connect, you earn a commission. See our How It Works page for the full breakdown." },
-    ],
-  },
-  {
-    group: "For Owners",
-    items: [
-      { q: "How do I list my property?", a: "Create an owner account, then go to List Your PG and fill in your property details, rooms, amenities, and photos." },
-      { q: "How long does verification take?", a: "Our team typically reviews new listings within 48 hours. You'll see the status update on your listing dashboard once it's verified." },
-      { q: "What does PG Connect charge?", a: "A platform fee is deducted from each rent payment collected through PG Connect — see the Pricing & Commission section on our How It Works page for the exact breakdown." },
-      { q: "How do I manage inquiries and bookings?", a: "Once verified, your Owner Dashboard shows incoming inquiries, room availability, and payment history in one place." },
-    ],
-  },
-  {
-    group: "Payments & Account",
-    items: [
-      { q: "How are rent payments processed?", a: "Payments are handled securely through Razorpay. PG Connect never stores your full card or bank details." },
-      { q: "How do I update my profile?", a: "Sign in and open your profile page from the account menu to update your name, phone number, or preferences." },
-      { q: "How do I delete my account?", a: "Contact us via the Contact page and we'll help you close your account and remove your data." },
-    ],
-  },
-];
+const Plus = () => (
+  <span className="faq-plus flex-none w-[34px] h-[34px] rounded-full grid place-items-center transition-transform bg-[var(--pg-bg)]" aria-hidden="true">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10231F" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+  </span>
+);
 
-function AccordionItem({ q, a }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border-b border-blue-50 last:border-0">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-4 py-4 text-left cursor-pointer"
-      >
-        <span className="text-sm font-semibold" style={{ color: "var(--pg-text)" }}>{q}</span>
-        <motion.svg animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--pg-primary)" }}>
-          <polyline points="6 9 12 15 18 9" />
-        </motion.svg>
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <p className="pb-4 text-sm leading-relaxed" style={{ color: "var(--pg-text-secondary)" }}>{a}</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+const anchor = (s) => s.toLowerCase().replace(/[^a-z]+/g, "-");
 
 export default function HelpCenterPage() {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--pg-bg)", color: "var(--pg-text)" }}>
+    <div className="min-h-screen flex flex-col bg-[var(--pg-bg)] text-[var(--pg-text)]">
       <Navbar />
-      <main id="main-content" className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 w-full">
-        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight" style={{ color: "var(--pg-text)" }}>Help Center</h1>
-        <p className="mt-2 text-sm max-w-lg" style={{ color: "var(--pg-text-secondary)" }}>
-          Answers to common questions. Can't find what you're looking for? <a href="/contact" className="font-semibold" style={{ color: "var(--pg-primary)" }}>Contact us</a>.
-        </p>
+      <main id="main-content" className="flex-1">
+        <PageHero eyebrow="Help Center" title="Questions we hear" accent="every June." intro="Answers for students, parents and PG owners. Can't find yours? Our team replies within a working day.">
+          <div className="flex flex-wrap gap-2 pt-1">
+            {FAQ_GROUPS.map((g) => (
+              <a key={g.group} href={`#${anchor(g.group)}`} className="no-underline text-[var(--pg-ink)] bg-white border border-[rgba(16,35,31,.12)] rounded-full px-4 min-h-10 inline-flex items-center text-sm font-semibold hover:border-[var(--pg-ink)] transition-colors">
+                {g.group}
+              </a>
+            ))}
+          </div>
+        </PageHero>
 
-        <div className="mt-10 space-y-8">
-          {FAQ_GROUPS.map((group) => (
-            <div key={group.group} className="bg-white dark:bg-slate-800 rounded-2xl border p-6 sm:p-8 shadow-sm" style={{ borderColor: "var(--pg-border-soft)" }}>
-              <h2 className="text-lg font-bold mb-2" style={{ color: "var(--pg-primary)" }}>{group.group}</h2>
-              <div>
-                {group.items.map((item) => (
-                  <AccordionItem key={item.q} q={item.q} a={item.a} />
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pb-28 flex flex-col gap-16">
+          {FAQ_GROUPS.map((g) => (
+            <section key={g.group} id={anchor(g.group)} className="scroll-mt-24 grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)] items-start">
+              <div className="flex flex-col gap-3 lg:sticky lg:top-24">
+                <span className="eyebrow">{g.items.length} answers</span>
+                <h2 className="display m-0 font-extrabold" style={{ fontSize: "clamp(30px, 3vw, 44px)", lineHeight: 1, letterSpacing: "-0.04em" }}>{g.group}</h2>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                {g.items.map((q) => (
+                  <details key={q.q} className="bg-white rounded-[22px] px-6">
+                    <summary className="flex justify-between items-center gap-4 py-[22px] text-lg font-bold min-h-11">
+                      {q.q}
+                      <Plus />
+                    </summary>
+                    <p className="m-0 pb-[22px] text-base leading-relaxed text-[var(--pg-text-secondary)] max-w-[680px]">{q.a}</p>
+                  </details>
                 ))}
               </div>
-            </div>
+            </section>
           ))}
+
+          <div className="rounded-[30px] px-7 py-8 flex flex-wrap items-center justify-between gap-5" style={{ background: "var(--pg-forest)", color: "#F5F3EE" }}>
+            <div className="flex flex-col gap-1 max-w-[520px]">
+              <span className="display text-2xl font-bold">Still stuck?</span>
+              <span className="text-[15px]" style={{ color: "rgba(245,243,238,.75)" }}>Tell us what you&apos;re looking for and we&apos;ll get back to you.</span>
+            </div>
+            <Link href="/contact" className="inline-flex items-center min-h-12 px-6 rounded-full font-bold text-[15px] no-underline" style={{ background: "var(--pg-lamp)", color: "#2A1C00" }}>Contact us</Link>
+          </div>
         </div>
       </main>
       <Footer />

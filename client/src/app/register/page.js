@@ -1,8 +1,8 @@
 "use client";
-import Head from "next/head";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
+import AuthShell from "../components/AuthShell";
 import { userRegister } from "../api";
 
 const STEPS = ["Account", "Personal", "Preferences"];
@@ -143,89 +143,37 @@ function RegisterForm() {
 
   if (submitted) {
     return (
-      <>
-        <Head>
-          <title>Welcome to PG Connect!</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-          <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-          <style>{`body { font-family: 'DM Sans', sans-serif; } .font-serif-display { font-family: 'DM Serif Display', serif; }`}</style>
-        </Head>
-        <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--pg-bg)" }}>
-          <div className="text-center">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md" style={{ background: "var(--pg-primary)" }}>
-              <svg className="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--pg-text)" }}>You're all set!</h1>
-            <p className="text-sm" style={{ color: "var(--pg-text-secondary)" }}>Your account has been created. Redirecting to sign in…</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center px-6 bg-[var(--pg-bg)] text-[var(--pg-text)]">
+        <div className="max-w-[520px] w-full rounded-[36px] p-10 flex flex-col items-center text-center gap-5" style={{ background: "var(--pg-forest)", color: "#F5F3EE" }}>
+          <span className="bed-free w-16 h-16 rounded-2xl grid place-items-center" style={{ background: "#FFD27A" }}>
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="#2A1C00" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </span>
+          <h1 className="display m-0 text-4xl font-extrabold tracking-[-0.04em]">You&apos;re all set!</h1>
+          <p className="m-0 text-base" style={{ color: "rgba(245,243,238,.78)" }}>Your account has been created. Redirecting you to log in…</p>
         </div>
-      </>
+      </div>
     );
   }
 
+  const signInHref = nextPath ? `/signin?next=${encodeURIComponent(nextPath)}` : "/signin";
+
   return (
-    <>
-      <Head>
-        <title>Create Account — PG Connect</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
-        <style>{`body { font-family: 'DM Sans', sans-serif; } .font-serif-display { font-family: 'DM Serif Display', serif; }`}</style>
-      </Head>
-
-      <div className="min-h-screen flex flex-col" style={{ background: "var(--pg-bg)" }}>
-
-        {/* ── NAV ── */}
-        <nav className="bg-white dark:bg-slate-800 border-b border-blue-100 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-14 flex items-center justify-between">
-            <button onClick={() => router.push("/")} className="font-bold text-base sm:text-lg cursor-pointer" style={{ color: "var(--pg-primary)" }}>
-              PG Connect
-            </button>
-            <p className="text-sm" style={{ color: "var(--pg-text-secondary)" }}>
-              Already have an account?{" "}
-              <button onClick={() => router.push(nextPath ? `/signin?next=${encodeURIComponent(nextPath)}` : "/signin")} className="font-semibold cursor-pointer" style={{ color: "var(--pg-primary)" }}>Sign in</button>
-            </p>
-          </div>
-        </nav>
-
-        <main id="main-content" className="flex-1 flex items-center justify-center px-4 py-12">
-          <div className="w-full max-w-md">
-
-            {/* ── CARD ── */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border overflow-hidden" style={{ borderColor: "var(--pg-border)" }}>
-
-              {/* Google button (step 0 only) */}
-              {step === 0 && (
-                <>
-                  <div className="px-7 sm:px-9 pt-7 pb-5">
-                    <button className="w-full flex items-center justify-center gap-3 bg-[var(--pg-bg)] hover:bg-slate-200 active:scale-[.98] transition-all text-slate-800 dark:text-slate-200 font-semibold text-sm py-3 rounded-xl cursor-pointer">
-                      <svg className="w-5 h-5" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
-                      Continue with Google
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center gap-3 px-7 sm:px-9">
-                    <div className="flex-1 h-px bg-slate-200" />
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-500">Or with email</span>
-                    <div className="flex-1 h-px bg-slate-200" />
-                  </div>
-                </>
-              )}
-
+    <AuthShell
+      eyebrow={`Step ${step + 1} of ${lastStep + 1}`}
+      title="Create your"
+      accent="account."
+      intro="Students find verified beds; owners list and manage their PGs."
+      footer={
+        <p className="m-0 text-[15px] text-[var(--pg-text-secondary)]">
+          Already have an account? <Link href={signInHref} className="font-bold">Log in</Link>
+        </p>
+      }
+    >
+            <div className="bg-white rounded-[30px] overflow-hidden" style={{ boxShadow: "var(--pg-shadow-card)" }}>
               <form onSubmit={handleSubmit}>
-                <div className={`px-7 sm:px-9 ${step === 0 ? "pt-5" : "pt-7"} pb-7`}>
+                <div className="px-6 sm:px-8 pt-7 pb-7">
                   {errors.submit && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-medium px-4 py-2.5 rounded-xl mb-4">
+                    <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-medium px-4 py-2.5 rounded-2xl mb-4">
                       {errors.submit}
                     </div>
                   )}
@@ -233,12 +181,6 @@ function RegisterForm() {
                   {/* ── STEP 0: Account ── */}
                   {step === 0 && (
                     <div className="space-y-4">
-                      {/* Heading */}
-                      <div className="mb-6">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-[var(--pg-text)]">Create your account</h2>
-                        <p className="text-sm text-slate-500 mt-2">Join 24,000+ students and owners on PG Connect</p>
-                      </div>
-
                       {/* Role selector */}
                       <div>
                         <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">I am a</label>
@@ -253,7 +195,7 @@ function RegisterForm() {
                               type="button"
                               onClick={() => set("role", r.value)}
                                       style={form.role === r.value ? { borderColor: "var(--pg-primary)", background: "var(--pg-chip-bg)" } : { borderColor: "var(--pg-border-soft)", background: "var(--pg-surface)" }}
-                              className="text-left border-2 rounded-xl p-3 transition-all"
+                              className="text-left border-2 rounded-2xl p-3 transition-all"
                             >
                               <p className="text-sm font-bold" style={{ color: form.role === r.value ? "var(--pg-primary)" : "var(--pg-text)" }}>{r.label}</p>
                               <p className="text-[11px] mt-1 leading-snug" style={{ color: form.role === r.value ? "var(--pg-primary)" : "var(--pg-text-secondary)" }}>{r.desc}</p>
@@ -270,7 +212,7 @@ function RegisterForm() {
                           placeholder="name@university.edu"
                           value={form.email}
                           onChange={(e) => set("email", e.target.value)}
-                          className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                          className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                         />
                         {errors.email && <p className="text-xs text-red-600 mt-1.5 flex items-center gap-1"><svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>{errors.email}</p>}
                       </div>
@@ -284,7 +226,7 @@ function RegisterForm() {
                             placeholder="••••••••"
                             value={form.password}
                             onChange={(e) => set("password", e.target.value)}
-                            className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all pr-11" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                            className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all pr-11" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                           />
                           <button
                             type="button"
@@ -324,7 +266,7 @@ function RegisterForm() {
                             placeholder="••••••••"
                             value={form.confirmPassword}
                             onChange={(e) => set("confirmPassword", e.target.value)}
-                            className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all pr-11" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                            className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all pr-11" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                           />
                           <button
                             type="button"
@@ -366,7 +308,7 @@ function RegisterForm() {
                             placeholder="Aditya"
                             value={form.firstName}
                             onChange={(e) => set("firstName", e.target.value)}
-                            className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                            className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                           />
                           {errors.firstName && <p className="text-xs text-red-600 mt-1.5">{errors.firstName}</p>}
                         </div>
@@ -377,7 +319,7 @@ function RegisterForm() {
                             placeholder="Kapoor"
                             value={form.lastName}
                             onChange={(e) => set("lastName", e.target.value)}
-                            className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                            className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                           />
                           {errors.lastName && <p className="text-xs text-red-600 mt-1.5">{errors.lastName}</p>}
                         </div>
@@ -390,7 +332,7 @@ function RegisterForm() {
                           placeholder="98765 43210"
                           value={form.phone}
                           onChange={(e) => set("phone", e.target.value)}
-                          className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                          className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                         />
                         {errors.phone && <p className="text-xs text-red-600 mt-1.5">{errors.phone}</p>}
                       </div>
@@ -403,14 +345,14 @@ function RegisterForm() {
                           placeholder="University of Example"
                           value={form.university}
                           onChange={(e) => set("university", e.target.value)}
-                          className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                          className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                         />
                         {errors.university && <p className="text-xs text-red-600 mt-1.5">{errors.university}</p>}
                       </div>
                     )}
 
                     {form.role === "agent" && (
-                      <div className="rounded-xl border p-3.5" style={{ borderColor: "var(--pg-border)", background: "var(--pg-bg)" }}>
+                      <div className="rounded-2xl border p-3.5" style={{ borderColor: "var(--pg-border)", background: "var(--pg-bg)" }}>
                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                           You'll get a unique agent code after signing up. PG owners enter it when listing their
                           property to connect it to you. Your account needs a quick admin approval before the
@@ -462,7 +404,7 @@ function RegisterForm() {
                               <select
                                 value={form.university}
                                 onChange={(e) => set("university", e.target.value)}
-                                className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all appearance-none" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                                className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all appearance-none" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                               >
                                 <option value="">Enter your university</option>
                                 {universities.map(u => <option key={u}>{u}</option>)}
@@ -480,7 +422,7 @@ function RegisterForm() {
                               type="date"
                               value={form.moveInDate}
                               onChange={(e) => set("moveInDate", e.target.value)}
-                              className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                              className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                             />
                           </div>
 
@@ -488,7 +430,7 @@ function RegisterForm() {
                             <div>
                               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Budget (₹)</label>
                               <div className="relative">
-                                <select value={form.budget} onChange={(e) => set("budget", e.target.value)} className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all appearance-none">
+                                <select value={form.budget} onChange={(e) => set("budget", e.target.value)} className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-2xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all appearance-none">
                                   <option value="">Any budget</option>
                                   <option>Under ₹8,000</option>
                                   <option>₹8,000 – ₹15,000</option>
@@ -501,7 +443,7 @@ function RegisterForm() {
                             <div>
                               <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Room Type</label>
                               <div className="relative">
-                                <select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all appearance-none">
+                                <select value={form.gender} onChange={(e) => set("gender", e.target.value)} className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-2xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all appearance-none">
                                   <option value="">Any</option>
                                   <option>Boys</option>
                                   <option>Girls</option>
@@ -521,13 +463,13 @@ function RegisterForm() {
                               placeholder="e.g. Bangalore, Delhi"
                               value={form.propertyCity}
                               onChange={(e) => set("propertyCity", e.target.value)}
-                              className="w-full border rounded-xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
+                              className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
                             />
                           </div>
                           <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">Number of Properties</label>
                             <div className="relative">
-                              <select value={form.propertiesCount} onChange={(e) => set("propertiesCount", e.target.value)} className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all appearance-none">
+                              <select value={form.propertiesCount} onChange={(e) => set("propertiesCount", e.target.value)} className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-2xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all appearance-none">
                                 <option value="">Select</option>
                                 <option>1</option>
                                 <option>2–5</option>
@@ -570,7 +512,7 @@ function RegisterForm() {
                       <button
                         type="button"
                         onClick={back}
-                        className="px-6 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold text-sm rounded-xl hover:bg-[var(--pg-bg)] transition-colors cursor-pointer"
+                        className="px-6 min-h-[52px] rounded-full border-[1.5px] border-[var(--pg-ink)] text-[var(--pg-ink)] font-bold text-base hover:bg-[var(--pg-ink)] hover:text-white transition-colors cursor-pointer"
                       >
                         Back
                       </button>
@@ -579,7 +521,7 @@ function RegisterForm() {
                       <button
                         type="button"
                         onClick={next}
-                        className="flex-1 active:scale-[0.98] transition-all text-white font-bold text-sm py-3.5 rounded-xl cursor-pointer" style={{ background: "var(--pg-primary)" }}
+                        className="btn-shine flex-1 min-h-[52px] rounded-full text-white font-bold text-base cursor-pointer" style={{ background: "var(--pg-ink)" }}
                       >
                         Continue
                       </button>
@@ -587,7 +529,7 @@ function RegisterForm() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 active:scale-[0.98] transition-all text-white font-bold text-sm py-3.5 rounded-xl cursor-pointer disabled:opacity-70 flex items-center justify-center gap-2" style={{ background: "var(--pg-primary)" }}
+                        className="btn-shine flex-1 min-h-[52px] rounded-full text-white font-bold text-base cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2" style={{ background: "var(--pg-terracotta)", boxShadow: "0 12px 28px -10px rgba(180,70,31,.7)" }}
                       >
                         {loading ? (
                           <>
@@ -606,32 +548,6 @@ function RegisterForm() {
                 </div>
               </form>
             </div>
-
-            <p className="text-center text-xs text-slate-500 mt-5 flex items-center justify-center gap-1.5">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              Secured by PG Connect Authentication
-            </p>
-          </div>
-        </main>
-
-        <footer className="border-t" style={{ background: "var(--pg-surface)", borderColor: "var(--pg-border-soft)" }}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <p className="text-sm font-bold" style={{ color: "var(--pg-primary)" }}>PG Connect</p>
-            <div className="flex gap-5">
-              {[
-                { label: "Privacy Policy", href: "/privacy" },
-                { label: "Terms of Service", href: "/terms" },
-                { label: "Cookie Policy", href: "/cookie-policy" },
-              ].map((l) => (
-                <Link key={l.label} href={l.href} className="text-xs transition-colors" style={{ color: "var(--pg-text-tertiary)" }}>{l.label}</Link>
-              ))}
-            </div>
-          </div>
-        </footer>
-      </div>
-    </>
+    </AuthShell>
   );
 }

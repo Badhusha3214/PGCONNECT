@@ -5,8 +5,8 @@ export default function manifest() {
     description: "Find verified PGs and co-living spaces with transparent pricing, room availability, amenities, and manager details.",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#1D4ED8",
+    background_color: "#F5F3EE",
+    theme_color: "#F5F3EE",
     orientation: "portrait-primary",
     categories: ["real-estate", "lifestyle"],
     icons: [

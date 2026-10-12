@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { SITE_URL } from "../../../lib/site";
 import { cache } from "react";
 import InquiryForm from "./InquiryForm";
 import BookingForm from "./BookingForm";
@@ -6,9 +8,8 @@ import ReviewForm from "./ReviewForm";
 import Gallery from "./Gallery";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
-import Reveal from "../../components/Reveal";
+import { apiGet } from "../../../lib/serverApi";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200&q=80";
 
@@ -86,13 +87,35 @@ const getPropertyReviews = cache(async (id) => {
   return { reviews: data?.reviews ?? [], total: data?.total ?? 0 };
 });
 
-const buildPropertyDescription = (property) => {
-  const city = property?.city || "India";
-  const price = Number(property?.starting_price || 0).toLocaleString("en-IN");
-  const available = property?.available_beds ?? 0;
-  const tagline = property?.tagline || "Verified PG with detailed amenities and room information.";
+const GENDER_LABEL = { Boys: "Boys PG", Girls: "Girls PG", "Co-ed": "Co-ed PG" };
 
-  return `${tagline} Located in ${city}. Starting from INR ${price} per month with ${available} beds currently available.`;
+// ~150-160 chars: who it's for, where, room types, highlights, price, live availability.
+const AMENITY_LABEL = { wifi: "WiFi", ac: "AC", tv: "TV", cctv: "CCTV" };
+const formatAmenity = (a) => {
+  const key = String(a || "").trim();
+  return AMENITY_LABEL[key.toLowerCase()] || key.charAt(0).toUpperCase() + key.slice(1);
+};
+
+const buildPropertyDescription = (property) => {
+  const kind = GENDER_LABEL[property?.gender] || "PG";
+  // Landmarks are often stored as "Near X" — strip it so we don't write "near Near X".
+  const landmark = String(property?.landmark || "").replace(/^\s*near\s+/i, "");
+  const place = [landmark, property?.city].filter(Boolean).join(", ") || "Kerala";
+  const roomTypes = [...new Set((property?.property_rooms || []).map((r) => r.type).filter(Boolean))];
+  const rooms = roomTypes.length ? `${roomTypes.join(", ")} rooms` : "Rooms";
+  const highlights = (property?.amenities || []).slice(0, 3).map(formatAmenity).join(", ");
+  const price = Number(property?.starting_price || 0);
+  const beds = property?.available_beds ?? 0;
+
+  const parts = [
+    `${property?.is_verified ? "Verified " : ""}${kind} near ${place}.`,
+    `${rooms}${price ? ` from ₹${price.toLocaleString("en-IN")}/month` : ""}.`,
+    highlights ? `${highlights}.` : "",
+    beds > 0 ? `${beds} bed${beds === 1 ? "" : "s"} available now.` : "Currently full, check back soon.",
+  ].filter(Boolean);
+
+  const text = parts.join(" ");
+  return text.length <= 160 ? text : `${text.slice(0, 157).trimEnd()}…`;
 };
 
 const buildStructuredData = (property, propertyId, images) => {
@@ -128,7 +151,7 @@ const buildStructuredData = (property, propertyId, images) => {
       "@type": "PostalAddress",
       streetAddress: property?.address || "",
       addressLocality: property?.city || "",
-      addressRegion: property?.landmark || "",
+      addressRegion: property?.state || "",
       addressCountry: "IN",
     },
     telephone: property?.manager_phone || property?.owner?.phone || "",
@@ -158,12 +181,15 @@ export async function generateMetadata({ params }) {
   }
 
   const image = property?.property_images?.[0]?.image_url || FALLBACK_IMAGE;
-  const title = `${property.name} in ${property?.city || "India"}`;
+  const genderLabel = GENDER_LABEL[property?.gender] || "PG";
+  const price = Number(property?.starting_price || 0);
+  const title = `${property.name}: ${genderLabel} in ${property?.city || "Kerala"}${price ? ` from ₹${price.toLocaleString("en-IN")}/mo` : ""}`;
   const description = buildPropertyDescription(property);
   const canonical = `/property/${id}`;
 
   return {
-    title,
+    // No "| PG Connect" suffix: keeps property titles ~60 chars; brand is in og:site_name.
+    title: { absolute: title },
     description,
     keywords: [
       property.name,
@@ -203,22 +229,7 @@ export default async function PropertyDetailPage({ params }) {
   const { id } = await params;
   const property = await getPropertyById(id);
 
-  if (!property) {
-    return (
-      <div className="min-h-screen bg-[var(--pg-bg)] text-[var(--pg-text)]">
-        <Navbar />
-        <div className="flex items-center justify-center px-4 py-24 text-center text-[var(--pg-text-secondary)]">
-          <div>
-            <p className="text-lg font-semibold text-[var(--pg-text)]">Property not found</p>
-            <p className="mt-2 text-sm">The listing may have been removed or the URL is invalid.</p>
-            <Link href="/propertys" className="mt-5 inline-block rounded-full border border-[var(--pg-border)] px-4 py-2 text-sm font-semibold text-[var(--pg-text)] hover:border-blue-300 hover:text-[var(--pg-primary)]">
-              Back to Listings
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!property) notFound();
 
   const { reviews, total: reviewsTotal } = await getPropertyReviews(id);
   const images = property?.property_images?.length
@@ -227,180 +238,230 @@ export default async function PropertyDetailPage({ params }) {
   const rooms = Array.isArray(property?.property_rooms) ? property.property_rooms : [];
   const amenities = Array.isArray(property?.amenities) ? property.amenities : [];
   const schema = buildStructuredData(property, id, images);
+  const citySearchHref = `/propertys?location=${encodeURIComponent(property.city || "")}`;
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: `PGs in ${property.city || "Kerala"}`, item: `${SITE_URL}${citySearchHref}` },
+      { "@type": "ListItem", position: 3, name: property.name },
+    ],
+  };
+  // Server-rendered links to neighbouring listings, so every property is reachable by crawling.
+  const nearby = property.city
+    ? ((await apiGet(`/api/properties?city=${encodeURIComponent(property.city)}&limit=7`, { revalidate: 300 }))?.properties ?? [])
+        .filter((p) => p.id !== property.id)
+        .slice(0, 6)
+    : [];
+
+  const freeBeds = Number(property.available_beds ?? 0);
+  const genderLabel = GENDER_LABEL[property.gender] || "PG";
+  const card = "bg-white rounded-[30px] p-7";
+  const h2 = "display m-0 text-[28px] font-bold tracking-[-0.03em]";
 
   return (
     <div className="min-h-screen bg-[var(--pg-bg)] text-[var(--pg-text)]">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([schema, breadcrumbSchema]) }} />
 
       <Navbar />
 
-      <main id="main-content" className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <Link href="/propertys" className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--pg-primary)] hover:opacity-80 transition-opacity">
-          &larr; Back to Listings
-        </Link>
-        <div className="space-y-6">
-          <Reveal as="section" className="overflow-hidden rounded-3xl border border-[var(--pg-border)] bg-white dark:bg-slate-800 shadow-sm">
-            <div className="grid gap-0 lg:grid-cols-[1.4fr_0.8fr]">
-              <Gallery images={images} name={property.name} />
+      <main id="main-content" className="mx-auto max-w-[1280px] px-4 sm:px-6 pt-8 pb-24">
+        <nav aria-label="Breadcrumb" className="mb-6">
+          <ol className="mono flex flex-wrap items-center gap-2 text-[12px] tracking-[.08em] uppercase text-[var(--pg-text-tertiary)] list-none m-0 p-0">
+            <li><Link href="/" className="text-[var(--pg-text-tertiary)] no-underline hover:text-[var(--pg-terracotta)]">Home</Link></li>
+            <li aria-hidden="true">/</li>
+            <li><Link href={citySearchHref} className="text-[var(--pg-text-tertiary)] no-underline hover:text-[var(--pg-terracotta)]">PGs in {property.city || "Kerala"}</Link></li>
+            <li aria-hidden="true">/</li>
+            <li aria-current="page" className="truncate text-[var(--pg-ink)]">{property.name}</li>
+          </ol>
+        </nav>
 
-              <div className="flex flex-col justify-between gap-6 p-6 sm:p-8">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--pg-primary)]">
-                    {/* <span className="rounded-full bg-[var(--pg-chip-bg)] px-3 py-1">{property.status || "verified"}</span> */}
-                    {property.is_verified && <span className="rounded-full bg-green-50 px-3 py-1 text-green-700">Verified</span>}
-                  </div>
-                  <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">{property.name}</h1>
-                  <p className="mt-2 text-base text-[var(--pg-text-secondary)]">{property.tagline}</p>
-
-                  <div className="mt-5 space-y-3 text-sm text-[var(--pg-text-secondary)]">
-                    <p><span className="font-semibold text-[var(--pg-text)]">Location:</span> {property.address || "-"}, {property.city || "-"}</p>
-                    <p><span className="font-semibold text-[var(--pg-text)]">Landmark:</span> {property.landmark || "-"}</p>
-                    <p><span className="font-semibold text-[var(--pg-text)]">Manager:</span> {property.manager_name || "-"} {property.manager_phone ? `(${property.manager_phone})` : ""}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 rounded-2xl bg-[var(--pg-bg)] p-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-widest text-[var(--pg-text-tertiary)]">Starting price</p>
-                    <p className="mt-1 text-xl font-bold text-[var(--pg-text)]">{formatCurrency(property.starting_price)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-widest text-[var(--pg-text-tertiary)]">Beds available</p>
-                    <p className="mt-1 text-xl font-bold text-[var(--pg-text)]">{property.available_beds ?? 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-widest text-[var(--pg-text-tertiary)]">Rating</p>
-                    <p className="mt-1 text-xl font-bold text-[var(--pg-text)]">{property.rating || 0}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-widest text-[var(--pg-text-tertiary)]">Views</p>
-                    <p className="mt-1 text-xl font-bold text-[var(--pg-text)]">{property.views || 0}</p>
-                  </div>
-                </div>
-              </div>
+        {/* Header */}
+        <header className="flex flex-wrap items-end justify-between gap-6 mb-8">
+          <div className="flex flex-col gap-3 max-w-[820px]">
+            <span className="eyebrow">{genderLabel} · {property.city || "Kerala"}</span>
+            <h1 className="display m-0 font-extrabold" style={{ fontSize: "clamp(40px, 5vw, 72px)", lineHeight: 0.98, letterSpacing: "-0.045em" }}>{property.name}</h1>
+            {property.tagline && <p className="m-0 text-lg text-[var(--pg-text-secondary)]">{property.tagline}</p>}
+            <div className="flex flex-wrap gap-2 pt-1 text-sm font-semibold">
+              {property.is_verified && (
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5" style={{ background: "var(--pg-success-bg)", color: "var(--pg-success)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z" /><path d="M8.5 12l2.5 2.5 4.5-5" /></svg>
+                  Verified
+                </span>
+              )}
+              {property.total_ratings > 0 && <span className="rounded-full bg-white px-3 py-1.5"><span style={{ color: "var(--pg-terracotta)" }}>★</span> {Number(property.rating).toFixed(1)} · {property.total_ratings} review{property.total_ratings === 1 ? "" : "s"}</span>}
+              <span className="rounded-full px-3 py-1.5 text-white" style={{ background: freeBeds > 0 && freeBeds <= 2 ? "var(--pg-terracotta)" : "var(--pg-ink)" }}>{freeBeds > 0 ? `${freeBeds} bed${freeBeds === 1 ? "" : "s"} free` : "Full right now"}</span>
             </div>
-          </Reveal>
+          </div>
+          <div className="text-right">
+            <span className="block text-sm text-[var(--pg-text-tertiary)]">from</span>
+            <span className="display font-extrabold" style={{ fontSize: 44, letterSpacing: "-0.04em", lineHeight: 1 }}>{formatCurrency(property.starting_price)}</span>
+            <span className="block text-sm text-[var(--pg-text-tertiary)]">per bed / month</span>
+          </div>
+        </header>
 
-          <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <Reveal direction="right" className="rounded-3xl border border-[var(--pg-border)] bg-white dark:bg-slate-800 p-6 shadow-sm">
-              <h2 className="text-xl font-bold">Amenities</h2>
-              <div className="mt-4 flex flex-wrap gap-2">
+        <section className="rounded-[36px] overflow-hidden bg-white mb-8" style={{ boxShadow: "var(--pg-shadow-card)" }}>
+          <Gallery images={images} name={property.name} />
+        </section>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] items-start">
+          <div className="flex flex-col gap-6 min-w-0">
+            {/* At a glance */}
+            <section className="rounded-[30px] p-7 grid gap-4" style={{ background: "var(--pg-forest)", color: "#F5F3EE", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+              {[
+                ["Beds free", freeBeds],
+                ["Total beds", property.total_beds || 0],
+                ["Rating", property.total_ratings > 0 ? Number(property.rating).toFixed(1) : "New"],
+                ["Enquiries", property.inquiries_count || 0],
+              ].map(([k, v]) => (
+                <div key={k} className="flex flex-col gap-1">
+                  <span className="mono text-[11px] tracking-[.14em] uppercase" style={{ color: "rgba(245,243,238,.6)" }}>{k}</span>
+                  <span className="display text-[34px] font-extrabold tracking-[-0.04em]" style={{ color: k === "Beds free" ? "var(--pg-lamp)" : "#F5F3EE" }}>{v}</span>
+                </div>
+              ))}
+            </section>
+
+            {/* Rooms: each bed drawn, lit if free */}
+            <section className={card}>
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+                <h2 className={h2}>Rooms &amp; beds</h2>
+                <span className="flex gap-4 text-sm font-semibold text-[var(--pg-text-secondary)]">
+                  <span className="inline-flex items-center gap-2"><span className="w-3.5 h-5 rounded" style={{ background: "#FFF1CC", border: "2px solid #D99A1E" }} />Free</span>
+                  <span className="inline-flex items-center gap-2"><span className="w-3.5 h-5 rounded" style={{ background: "#E7E3D8", border: "1.5px dashed #A9A396" }} />Taken</span>
+                </span>
+              </div>
+              <div className="flex flex-col gap-3">
+                {rooms.length === 0 && <p className="m-0 text-[var(--pg-text-secondary)]">Room details coming soon.</p>}
+                {rooms.map((room) => {
+                  const total = Number(room.total_beds || 0);
+                  const free = Math.min(total, Number(room.available_beds ?? 0));
+                  return (
+                    <div key={room.id || room.type} className="rounded-[22px] p-5 flex flex-wrap items-center justify-between gap-4" style={{ background: "var(--pg-bg)" }}>
+                      <div className="flex flex-col gap-1 min-w-[180px] flex-1">
+                        <span className="display text-xl font-bold">{room.type} sharing</span>
+                        {room.description && <span className="text-sm text-[var(--pg-text-secondary)]">{room.description}</span>}
+                        <div className="flex flex-wrap gap-1.5 mt-2" aria-label={`${free} of ${total} beds free`}>
+                          {Array.from({ length: Math.min(total, 40) }, (_, i) => (
+                            <span key={i} aria-hidden="true" className={`w-[22px] h-[32px] rounded-md ${i < free ? "bed-free" : ""}`} style={i < free ? { background: "#FFF1CC", border: "2px solid #D99A1E" } : { background: "#E7E3D8", border: "1.5px dashed #A9A396" }} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="display text-2xl font-extrabold">{formatCurrency(room.price)}</span>
+                        <span className="block text-sm text-[var(--pg-text-tertiary)]">{free}/{total} beds free</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* Amenities + location */}
+            <section className={card}>
+              <h2 className={`${h2} mb-5`}>What&apos;s included</h2>
+              <div className="flex flex-wrap gap-2">
+                {amenities.length === 0 && <span className="text-[var(--pg-text-secondary)]">Ask the manager for the amenity list.</span>}
                 {amenities.map((amenity) => {
                   const iconKey = getAmenityIconKey(amenity);
                   return (
-                    <span key={amenity} className="inline-flex items-center gap-2 rounded-full border border-[var(--pg-border)] bg-[var(--pg-bg)] px-3 py-2 text-sm text-[var(--pg-text)] transition-colors hover:border-[var(--pg-primary)]">
+                    <span key={amenity} className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[15px] font-semibold capitalize" style={{ background: "var(--pg-bg)" }}>
                       {iconKey ? AMENITY_ICONS[iconKey] : null}
                       {amenity}
                     </span>
                   );
                 })}
               </div>
-
-              <h2 className="mt-8 text-xl font-bold">Rooms</h2>
-              <div className="mt-4 space-y-3">
-                {rooms.map((room) => (
-                  <div key={room.id || room.type} className="rounded-2xl border border-[var(--pg-border)] p-4 transition-all hover:border-[var(--pg-primary)] hover:shadow-md">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-[var(--pg-text)]">{room.type}</p>
-                        <p className="mt-1 text-sm text-[var(--pg-text-secondary)]">{room.description || "No room description provided."}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-[var(--pg-text)]">{formatCurrency(room.price)}</p>
-                        <p className="text-sm text-[var(--pg-text-tertiary)]">{room.available_beds}/{room.total_beds} beds available</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Reveal>
-
-            <Reveal direction="left" delay={0.1} as="aside" className="space-y-6">
-              <BookingForm propertyId={id} rooms={rooms} />
-              <InquiryForm propertyId={id} />
-
-              <div className="rounded-3xl border border-[var(--pg-border)] bg-white dark:bg-slate-800 p-6 shadow-sm">
-                <h2 className="text-xl font-bold">Manager</h2>
-                <div className="mt-4 space-y-2 text-sm text-[var(--pg-text-secondary)]">
-                  <p className="font-semibold text-[var(--pg-text)]">{property.manager_name || "-"}</p>
-                  <p>{property.manager_phone || "-"}</p>
+              <div className="kasavu my-7 opacity-60" aria-hidden="true" />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <span className="mono text-[11px] tracking-[.14em] uppercase text-[var(--pg-text-tertiary)]">Address</span>
+                  <span className="font-semibold">{[property.address, property.city].filter(Boolean).join(", ") || "—"}</span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="mono text-[11px] tracking-[.14em] uppercase text-[var(--pg-text-tertiary)]">Landmark</span>
+                  <span className="font-semibold">{property.landmark || "—"}</span>
                 </div>
               </div>
+            </section>
 
-              <div className="rounded-3xl border border-[var(--pg-border)] bg-white dark:bg-slate-800 p-6 shadow-sm">
-                <h2 className="text-xl font-bold">Property Stats</h2>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-2xl bg-[var(--pg-bg)] p-3">
-                    <p className="text-[var(--pg-text-tertiary)]">Total beds</p>
-                    <p className="mt-1 text-lg font-bold">{property.total_beds || 0}</p>
-                  </div>
-                  <div className="rounded-2xl bg-[var(--pg-bg)] p-3">
-                    <p className="text-[var(--pg-text-tertiary)]">Inquiries</p>
-                    <p className="mt-1 text-lg font-bold">{property.inquiries_count || 0}</p>
-                  </div>
-                  <div className="rounded-2xl bg-[var(--pg-bg)] p-3">
-                    <p className="text-[var(--pg-text-tertiary)]">Ratings</p>
-                    <p className="mt-1 text-lg font-bold">{property.total_ratings || 0}</p>
-                  </div>
-                  <div className="rounded-2xl bg-[var(--pg-bg)] p-3">
-                    <p className="text-[var(--pg-text-tertiary)]">Gender</p>
-                    <p className="mt-1 text-lg font-bold">{property.gender || "-"}</p>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </section>
-
-          <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-            <Reveal direction="right" className="rounded-3xl border border-[var(--pg-border)] bg-white dark:bg-slate-800 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold">Reviews</h2>
+            {/* Reviews */}
+            <section className={card}>
+              <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+                <h2 className={h2}>Reviews from residents</h2>
                 {property.total_ratings > 0 && (
-                  <span className="flex items-center gap-1.5 text-sm font-bold text-[var(--pg-text)]">
-                    <span style={{ color: "var(--pg-accent)" }}>★</span> {property.rating} <span className="font-normal text-[var(--pg-text-tertiary)]">({property.total_ratings})</span>
-                  </span>
+                  <span className="text-sm font-bold"><span style={{ color: "var(--pg-terracotta)" }}>★</span> {Number(property.rating).toFixed(1)} <span className="font-normal text-[var(--pg-text-tertiary)]">({property.total_ratings})</span></span>
                 )}
               </div>
-
               {reviews.length === 0 ? (
-                <p className="mt-4 text-sm text-[var(--pg-text-secondary)]">No reviews yet. Be the first to share your experience.</p>
+                <p className="m-0 text-[var(--pg-text-secondary)]">No reviews yet. Stayed here? Share your experience below.</p>
               ) : (
-                <div className="mt-4 space-y-4">
+                <div className="flex flex-col gap-3">
                   {reviews.map((r) => (
-                    <div key={r.id} className="rounded-2xl border border-[var(--pg-border)] p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-semibold text-[var(--pg-text)]">
-                            {r.tenant?.first_name || "Anonymous"} {r.tenant?.last_name?.[0] ? `${r.tenant.last_name[0]}.` : ""}
-                          </p>
-                          <div className="mt-0.5 flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <span key={s} style={{ color: s <= r.rating ? "var(--pg-accent)" : "#e2e8f0" }}>★</span>
-                            ))}
-                            {r.is_verified_stay && (
-                              <span className="ml-2 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700">Verified Stay</span>
-                            )}
-                          </div>
-                        </div>
-                        <span className="shrink-0 text-xs text-[var(--pg-text-tertiary)]">
-                          {new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                        </span>
-                      </div>
-                      {r.comment && <p className="mt-2 text-sm text-[var(--pg-text-secondary)]">{r.comment}</p>}
-                    </div>
+                    <figure key={r.id} className="m-0 rounded-[22px] p-5 flex flex-col gap-3" style={{ background: "var(--pg-bg)" }}>
+                      {r.comment && <blockquote className="display m-0 text-lg font-semibold leading-snug">“{r.comment}”</blockquote>}
+                      <figcaption className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="font-bold">{r.tenant?.first_name || "Resident"} {r.tenant?.last_name?.[0] ? `${r.tenant.last_name[0]}.` : ""}</span>
+                        <span aria-label={`${r.rating} out of 5`} style={{ color: "var(--pg-terracotta)" }}>{"★".repeat(r.rating)}<span style={{ color: "#DCD7CA" }}>{"★".repeat(5 - r.rating)}</span></span>
+                        {r.is_verified_stay && <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ background: "var(--pg-success-bg)", color: "var(--pg-success)" }}>Verified stay</span>}
+                        <span className="ml-auto text-[var(--pg-text-tertiary)]">{new Date(r.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      </figcaption>
+                    </figure>
                   ))}
-                  {reviewsTotal > reviews.length && (
-                    <p className="text-xs text-[var(--pg-text-tertiary)]">Showing {reviews.length} of {reviewsTotal} reviews</p>
-                  )}
+                  {reviewsTotal > reviews.length && <p className="m-0 text-xs text-[var(--pg-text-tertiary)]">Showing {reviews.length} of {reviewsTotal} reviews</p>}
                 </div>
               )}
-            </Reveal>
+              <div className="mt-6"><ReviewForm propertyId={id} /></div>
+            </section>
+          </div>
 
-            <Reveal direction="left" delay={0.1}>
-              <ReviewForm propertyId={id} />
-            </Reveal>
-          </section>
+          {/* Sticky action column */}
+          <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
+            <BookingForm propertyId={id} rooms={rooms} />
+            <InquiryForm propertyId={id} />
+            <div className="rounded-[30px] p-7 flex items-center gap-4" style={{ background: "var(--pg-terracotta)", color: "#fff" }}>
+              <span className="w-12 h-12 rounded-2xl grid place-items-center shrink-0" style={{ background: "rgba(255,255,255,.16)" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="mono text-[11px] tracking-[.14em]" style={{ color: "#FFE1CF" }}>MANAGER</span>
+                <span className="display text-xl font-bold truncate">{property.manager_name || "PG manager"}</span>
+                {property.manager_phone && <a href={`tel:${property.manager_phone}`} className="text-white font-semibold">{property.manager_phone}</a>}
+              </div>
+            </div>
+          </aside>
         </div>
+
+        {nearby.length > 0 && (
+          <section aria-labelledby="nearby-heading" className="mt-20 flex flex-col gap-8">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div className="flex flex-col gap-3">
+                <span className="eyebrow">Nearby</span>
+                <h2 id="nearby-heading" className="display m-0 font-extrabold" style={{ fontSize: "clamp(32px, 3.6vw, 52px)", lineHeight: 1, letterSpacing: "-0.04em" }}>More PGs in {property.city}.</h2>
+              </div>
+              <Link href={citySearchHref} className="inline-flex items-center gap-2 font-bold text-[var(--pg-ink)] no-underline min-h-11">See all in {property.city} →</Link>
+            </div>
+            <ul className="list-none m-0 p-0 grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(320px, 100%), 1fr))" }}>
+              {nearby.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/property/${p.id}`} className="lift no-underline text-[var(--pg-ink)] bg-white rounded-[30px] p-2.5 flex flex-col h-full">
+                    <div className="relative h-[200px] rounded-[22px] overflow-hidden" style={{ background: "linear-gradient(160deg, #D59A6A 0%, #8C5A3C 100%)" }}>
+                      <img src={p.property_images?.[0]?.image_url || FALLBACK_IMAGE} alt={p.name} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                      <span className="absolute top-3.5 left-3.5 text-xs font-bold px-[11px] py-1.5 rounded-full" style={{ background: "rgba(255,255,255,.92)" }}>{GENDER_LABEL[p.gender] || "PG"}</span>
+                    </div>
+                    <div className="px-3.5 pt-4 pb-3 flex justify-between items-start gap-3">
+                      <div className="min-w-0">
+                        <span className="display block text-xl font-bold truncate">{p.name}</span>
+                        <span className="block text-sm truncate text-[var(--pg-text-tertiary)]">{p.landmark || p.city}</span>
+                      </div>
+                      <span className="display text-xl font-extrabold whitespace-nowrap">{formatCurrency(p.starting_price)}</span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
       <Footer />
     </div>
