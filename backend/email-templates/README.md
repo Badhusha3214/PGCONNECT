@@ -11,19 +11,27 @@ Do these once per Supabase project (dev and production).
 ### 1. URL configuration
 Supabase Dashboard → **Authentication → URL Configuration**
 
-| Setting | Dev | Production |
+One Supabase project serves both dev and the live site, so **Site URL must be
+the live site** — otherwise every email (signup confirmation, password reset)
+links to localhost.
+
+| Setting | Value |
+|---|---|
+| Site URL | `https://pgconnect-zeta.vercel.app` |
+| Redirect URLs (add all) | `https://pgconnect-zeta.vercel.app/**` and `http://localhost:3000/**` |
+
+`{{ .SiteURL }}` in the templates comes from **Site URL**. The signup link's
+final landing page (`/signin?confirmed=1`) comes from the backend's
+`CLIENT_URL` and only works if that URL matches a Redirect URL above —
+otherwise Supabase silently falls back to Site URL.
+
+### 2. Templates
+Supabase Dashboard → **Authentication → Emails → Templates**
+
+| Template | Subject | Body |
 |---|---|---|
-| Site URL | `http://localhost:3000` | `https://your-domain.com` |
-| Redirect URLs (add) | `http://localhost:3000/reset-password` | `https://your-domain.com/reset-password` |
-
-`{{ .SiteURL }}` in the template comes from **Site URL** — if it's wrong, the
-email button points to the wrong site.
-
-### 2. Template
-Supabase Dashboard → **Authentication → Emails → Templates → Reset Password**
-
-- **Subject:** `Reset your PG Connect password`
-- **Body:** paste the whole of [`reset-password.html`](reset-password.html)
+| Confirm signup | `Confirm your email for PG Connect` | [`confirm-signup.html`](confirm-signup.html) |
+| Reset Password | `Reset your PG Connect password` | [`reset-password.html`](reset-password.html) |
 
 The button uses `token_hash`, so the link works even when the email is opened
 on a different phone or laptop from the one that requested it.

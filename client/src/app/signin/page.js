@@ -1,9 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { userLogin } from "../api";
 import AuthShell, { labelCls, inputCls, primaryBtnCls } from "../components/AuthShell";
+import CheckEmail from "../components/CheckEmail";
+
+// Supabase sends the user back here from the confirmation email. A bad link
+// arrives as #error_code=otp_expired&error_description=... in the hash.
+const readLinkError = () => {
+  if (typeof window === "undefined" || !window.location.hash.includes("error")) return "";
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const code = params.get("error_code");
+  if (code === "otp_expired") return "That confirmation link has expired or was already used. Log in below — if your email still isn't confirmed, we'll let you send a new link.";
+  return params.get("error_description")?.replace(/\+/g, " ") || "That link didn't work. Log in below to request a new one.";
+};
 
 export default function SignIn() {
   return (
@@ -22,11 +33,17 @@ function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const [linkError, setLinkError] = useState("");
+  const confirmed = searchParams?.get("confirmed") === "1";
+
+  useEffect(() => { setLinkError(readLinkError()); }, []);
 
   const handleSignIn = async (e) => {
     e.preventDefault();
     if (!email || !password) { setError("Please fill in all fields."); return; }
     setError("");
+    setUnconfirmed(false);
     setLoading(true);
     try {
       const response = await userLogin({ email, password });
@@ -41,6 +58,7 @@ function SignInForm() {
       else { router.push("/"); }
     } catch (err) {
       setLoading(false);
+      if (err?.code === "email_not_confirmed") { setUnconfirmed(true); return; }
       setError(`Login failed: ${err?.message || "Please try again."}`);
     }
   };
@@ -62,6 +80,13 @@ function SignInForm() {
         {searchParams?.get("reset") === "1" && !error && (
           <div role="status" className="text-sm font-medium px-4 py-3 rounded-2xl" style={{ background: "var(--pg-success-bg)", color: "var(--pg-success)" }}>Password updated — log in with your new password.</div>
         )}
+        {confirmed && !linkError && !error && !unconfirmed && (
+          <div role="status" className="text-sm font-medium px-4 py-3 rounded-2xl" style={{ background: "var(--pg-success-bg)", color: "var(--pg-success)" }}>Email confirmed — your account is ready. Log in to continue.</div>
+        )}
+        {linkError && !unconfirmed && (
+          <div role="alert" className="text-sm font-medium px-4 py-3 rounded-2xl" style={{ background: "var(--pg-danger-bg)", color: "var(--pg-danger)" }}>{linkError}</div>
+        )}
+        {unconfirmed && <CheckEmail email={email} compact />}
         {error && (
           <div role="alert" className="text-sm font-medium px-4 py-3 rounded-2xl" style={{ background: "var(--pg-danger-bg)", color: "var(--pg-danger)" }}>{error}</div>
         )}

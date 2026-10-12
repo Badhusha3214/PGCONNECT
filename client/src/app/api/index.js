@@ -45,18 +45,37 @@ export const userRegister = async ({ email, password, first_name, last_name, rol
     body: JSON.stringify({ email, password, first_name, last_name, role, phone, university }),
   })
   const data = await res.json()
-  if (!res.ok) throw new Error(data?.message || 'Registration failed')
+  if (!res.ok) {
+    const err = new Error(data?.message || 'Registration failed')
+    err.code = data?.code
+    throw err
+  }
 
-  // Step 2: sign in to get session
+  // Step 2: sign in to get session (only when no email confirmation is required)
   if (data.token) {
     await supabase.auth.setSession({ access_token: data.token, refresh_token: data.token })
   }
   return data
 }
 
+export const resendConfirmation = async (email) => {
+  const res = await fetch(`${BASE_URL}/api/auth/resend-confirmation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data?.message || 'Could not send the email')
+  return data
+}
+
 export const userLogin = async ({ email, password }) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) throw new Error(error.message)
+  if (error) {
+    const err = new Error(error.message)
+    err.code = error.code === 'email_not_confirmed' || /not confirmed/i.test(error.message) ? 'email_not_confirmed' : error.code
+    throw err
+  }
 
   // fetch profile from backend
   const profile = await authFetch('/api/auth/me')

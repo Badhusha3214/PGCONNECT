@@ -18,6 +18,11 @@ const registerSchema = z.object({
   university: z.string().optional(),
 })
 
+// Where the "Confirm your email" link lands after Supabase verifies it.
+// Must also be listed under Supabase → Authentication → URL Configuration → Redirect URLs.
+const confirmRedirect = (env: Env['Bindings']) =>
+  `${(env.CLIENT_URL || 'https://pgconnect-zeta.vercel.app').replace(/\/+$/, '')}/signin?confirmed=1`
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -28,9 +33,34 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
   const { email, password, first_name, last_name, role, phone, university } = c.req.valid('json')
   const supabase = getSupabase(c.env)
 
-  const { data, error } = await supabase.auth.signUp({ email, password })
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: confirmRedirect(c.env) },
+  })
   if (error || !data.user) {
     return c.json({ success: false, message: error?.message ?? 'Registration failed' }, 400)
+  }
+  // Supabase "fakes" a signup for an already-confirmed email (so accounts
+  // can't be enumerated): the user comes back with no identities, no email sent.
+  if ((data.user.identities?.length ?? 0) === 0) {
+    return c.json({
+      success: false,
+      code: 'email_exists',
+      message: 'An account with this email already exists. Log in, or use "Forgot password?" if you can\'t remember it.',
+    }, 409)
+  }
+
+  // Signing up again with an email that was never confirmed just re-sends the
+  // confirmation mail — the profile from the first attempt is still there.
+  const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', data.user.id).maybeSingle()
+  if (existingProfile) {
+    return c.json({
+      success: true,
+      needs_confirmation: true,
+      message: 'This email is already registered but not confirmed yet. We have sent the confirmation email again.',
+      user: { id: data.user.id, email },
+    }, 200)
   }
 
   const referral_code = role === 'student' ? generateReferralCode() : null
@@ -52,14 +82,34 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
     return c.json({ success: false, message: 'Failed to create profile' }, 500)
   }
 
+  // No session means Supabase is waiting for the user to click the email link.
+  const needsConfirmation = !data.session
   return c.json({
     success: true,
-    message: role === 'agent'
-      ? 'Registration successful. Your agent account is pending admin approval before your code can be used.'
-      : 'Registration successful. Please check your email to confirm your account.',
+    needs_confirmation: needsConfirmation,
+    message: needsConfirmation
+      ? 'Registration successful. Please check your email to confirm your account.'
+      : 'Registration successful.',
     user: { id: data.user.id, email, first_name, last_name, role, referral_code, agent_code },
     token: data.session?.access_token,
   }, 201)
+})
+
+// POST /api/auth/resend-confirmation — re-send the signup confirmation email.
+// Always answers the same way so it can't be used to probe which emails exist.
+authRouter.post('/resend-confirmation', zValidator('json', z.object({ email: z.string().email() })), async (c) => {
+  const { email } = c.req.valid('json')
+  const supabase = getSupabase(c.env)
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: confirmRedirect(c.env) },
+  })
+  if (error && /rate|seconds|too many/i.test(error.message)) {
+    return c.json({ success: false, message: 'Please wait a minute before requesting another email.' }, 429)
+  }
+  if (error) console.error('[auth/resend-confirmation]', error.message)
+  return c.json({ success: true, message: 'If this email has an unconfirmed account, a new confirmation link is on its way.' })
 })
 
 // POST /api/auth/login

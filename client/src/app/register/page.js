@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, Suspense } from "react";
 import AuthShell from "../components/AuthShell";
+import CheckEmail from "../components/CheckEmail";
 import { userRegister } from "../api";
 
 const STEPS = ["Account", "Personal", "Preferences"];
@@ -33,6 +34,7 @@ function RegisterForm() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const [form, setForm] = useState({
     // Step 0 — Account
@@ -102,12 +104,19 @@ function RegisterForm() {
         payload.university = form.university;
       }
 
-      await userRegister(payload);
+      const res = await userRegister(payload);
       setSubmitted(true);
+      // Email confirmation on: stay here and show "check your email".
+      if (res?.needs_confirmation !== false) { setNeedsConfirmation(true); return; }
       const signinUrl = nextPath ? `/signin?next=${encodeURIComponent(nextPath)}` : "/signin";
       setTimeout(() => router.push(signinUrl), 2000);
     } catch (err) {
       console.error('Registration error:', { status: err?.status, data: err?.data, message: err?.message });
+      if (err?.code === "email_exists") {
+        setErrors({ submit: err.message });
+        setStep(0);
+        return;
+      }
 
       // If server returned field-level validation errors, merge them into `errors`
       if (err?.data && typeof err.data === 'object') {
@@ -140,6 +149,14 @@ function RegisterForm() {
 
   const strengthLabel = ["", "Weak", "Fair", "Good", "Strong", "Excellent"][strength];
   const strengthColor = ["", "bg-red-400", "bg-amber-400", "bg-yellow-400", "bg-blue-500", "bg-green-500"][strength];
+
+  if (submitted && needsConfirmation) {
+    return (
+      <AuthShell eyebrow="One last step" title="Confirm your" accent="email.">
+        <CheckEmail email={form.email} role={form.role} />
+      </AuthShell>
+    );
+  }
 
   if (submitted) {
     return (
@@ -504,6 +521,12 @@ function RegisterForm() {
                       </label>
                       {errors.agreeTerms && <p className="text-xs text-red-600">{errors.agreeTerms}</p>}
                     </div>
+                  )}
+
+                  {step === lastStep && (
+                    <p className="mt-6 mb-0 text-xs text-[var(--pg-text-tertiary)] leading-relaxed">
+                      We&apos;ll email a confirmation link to <strong className="text-[var(--pg-ink)] break-all">{form.email}</strong>. You&apos;ll need to click it before you can log in.
+                    </p>
                   )}
 
                   {/* ── NAVIGATION BUTTONS ── */}
