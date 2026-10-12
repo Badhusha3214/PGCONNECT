@@ -225,16 +225,10 @@ export default function AgentDashboard() {
                 {/* How you earn */}
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 mb-6">
                   <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-1">How You Earn</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Two ways commission lands in your balance.</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700">
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">One-Time Bounty</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">A flat payout the moment a PG connected to your code gets verified by PG Connect.</p>
-                    </div>
-                    <div className="p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700">
-                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Recurring Commission</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">An ongoing cut of every rent payment made at your connected PGs, for as long as they stay active.</p>
-                    </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">How commission lands in your balance.</p>
+                  <div className="p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700">
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">One-Time Bounty</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">A flat payout the moment a PG connected to your code gets verified by PG Connect.</p>
                   </div>
                 </div>
 
@@ -317,7 +311,7 @@ export default function AgentDashboard() {
               <>
                 <div className="mb-7">
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Commission History</h1>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Bounties and recurring commission from your connected PGs.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Bounties from your connected PGs.</p>
                 </div>
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
                   {commissionsLoading ? (
@@ -326,7 +320,7 @@ export default function AgentDashboard() {
                     <div className="px-6 py-12 text-center">
                       <p className="text-3xl mb-3">💰</p>
                       <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No commissions yet</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Bounties post when a connected PG is verified; recurring commission posts when rent is paid.</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">A bounty posts when a connected PG is verified.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
@@ -405,9 +399,7 @@ export default function AgentDashboard() {
                     {[
                       { n: 1, title: "Share your code", desc: "Send your unique agent code or link to a PG owner you've onboarded." },
                       { n: 2, title: "Owner lists their PG", desc: "The owner enters your code while listing their property. It's now connected to you." },
-                      { n: 3, title: "Admin verifies the PG", desc: "PG Connect reviews and verifies the listing — you earn a one-time bounty the moment it goes live." },
-                      { n: 4, title: "Tenants book and pay", desc: "Every rent payment made at that PG earns you an ongoing recurring commission." },
-                    ].map((step) => (
+                      { n: 3, title: "Admin verifies the PG", desc: "PG Connect reviews and verifies the listing — you earn a one-time bounty the moment it goes live." },                    ].map((step) => (
                       <div key={step.n} className="flex items-start gap-4">
                         <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{step.n}</div>
                         <div>

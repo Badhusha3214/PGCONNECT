@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { getSupabase } from '../lib/supabase'
 import { authMiddleware, requireRole } from '../middleware/auth'
-import { AGENT_RECURRING_RATE } from '../lib/commission'
 import { reclaimOrExtendBed, occupyBed, releaseBed, claimBedForRoom } from '../lib/beds'
 import { razorpayRequest, verifyRazorpaySignature } from '../lib/razorpay'
 import { settleListingPayment } from './listing'
@@ -90,7 +89,7 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
 
   const { data: payment } = await supabase
     .from('payments')
-    .select('*, bookings(monthly_rent, property_id, bed_id, room_type, properties(referred_by, commission_option, agent_id))')
+    .select('*, bookings(monthly_rent, property_id, bed_id, room_type, properties(referred_by, commission_option))')
     .eq('id', payment_id)
     .eq('tenant_id', user.id)
     .single()
@@ -104,14 +103,14 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
 
   const bookingInfo = payment.bookings as {
     property_id: string; bed_id: string | null; room_type: string
-    properties: { referred_by: string | null; commission_option: string; agent_id: string | null }
+    properties: { referred_by: string | null; commission_option: string }
   }
   const property = bookingInfo?.properties
   const referredBy = property?.referred_by ?? null
   const commissionOption = property?.commission_option ?? 'recurring'
-  const agentId = property?.agent_id ?? null
-  const agentCommission = agentId ? rent * AGENT_RECURRING_RATE : 0
-  const platformRevenue = platformFee - referrerCommission - agentCommission
+  // Agents are paid only the one-time verification bounty, never a cut of rent.
+  const agentCommission = 0
+  const platformRevenue = platformFee - referrerCommission
 
   await supabase.from('payments').update({
     razorpay_payment_id,
@@ -156,7 +155,7 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
 
   const creditCommission = async (opts: {
     earnerId: string
-    role: 'referrer' | 'agent'
+    role: 'referrer'
     amount: number
     type: 'recurring' | 'one-time'
     onlyIfNotAlreadyPaid: boolean
@@ -204,16 +203,6 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
       amount: referrerCommission,
       type: commissionOption as 'recurring' | 'one-time',
       onlyIfNotAlreadyPaid: commissionOption === 'one-time',
-    })
-  }
-
-  if (agentId) {
-    await creditCommission({
-      earnerId: agentId,
-      role: 'agent',
-      amount: agentCommission,
-      type: 'recurring',
-      onlyIfNotAlreadyPaid: false,
     })
   }
 

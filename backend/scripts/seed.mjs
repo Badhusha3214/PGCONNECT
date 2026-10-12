@@ -466,13 +466,13 @@ console.log('Creating payments + commissions...')
 // Payment 1: booking 3 (property B, agent-connected), paid this month
 const pay1 = {
   id: paymentId(1), booking_id: bookingId(3), tenant_id: uid.divya, property_id: propId(2), amount: 7000,
-  platform_fee: 350, referrer_commission: 0, agent_commission: 70, platform_revenue: 280, owner_payout: 6650,
+  platform_fee: 350, referrer_commission: 0, agent_commission: 0, platform_revenue: 350, owner_payout: 6650,
   razorpay_order_id: 'seed_order_1', razorpay_payment_id: 'seed_pay_1', status: 'paid', month: currentMonth,
 }
 // Payment 2: booking 4 (property B), paid LAST month only (this month unpaid -> overdue)
 const pay2 = {
   id: paymentId(2), booking_id: bookingId(4), tenant_id: uid.ananya, property_id: propId(2), amount: 5000,
-  platform_fee: 250, referrer_commission: 0, agent_commission: 50, platform_revenue: 200, owner_payout: 4750,
+  platform_fee: 250, referrer_commission: 0, agent_commission: 0, platform_revenue: 250, owner_payout: 4750,
   razorpay_order_id: 'seed_order_2', razorpay_payment_id: 'seed_pay_2', status: 'paid', month: lastMonth,
 }
 // Payment 3: booking 6 (property A, referred by divya), paid this month
@@ -490,9 +490,9 @@ for (const pay of [pay1, pay2, pay3]) {
 const commissions = [
   { id: commissionId(1), referrer_id: uid.divya, property_id: propId(1), payment_id: paymentId(3), amount: 160, type: 'recurring', role: 'referrer', status: 'pending', month: currentMonth },
   { id: commissionId(2), referrer_id: uid.vishnu, property_id: propId(2), payment_id: null, amount: 500, type: 'bounty', role: 'agent', status: 'paid', month: lastMonth },
-  { id: commissionId(3), referrer_id: uid.vishnu, property_id: propId(2), payment_id: paymentId(1), amount: 70, type: 'recurring', role: 'agent', status: 'pending', month: currentMonth },
-  { id: commissionId(4), referrer_id: uid.vishnu, property_id: propId(2), payment_id: paymentId(2), amount: 50, type: 'recurring', role: 'agent', status: 'pending', month: lastMonth },
 ]
+// Agents no longer earn recurring commission — drop rows left by older seeds.
+await supabase.from('commissions').delete().in('id', [commissionId(3), commissionId(4)])
 for (const c of commissions) {
   const { error } = await supabase.from('commissions').upsert(c, { onConflict: 'id' })
   if (error) throw new Error(`commission ${c.id}: ${error.message}`)
@@ -500,7 +500,7 @@ for (const c of commissions) {
 
 // Reflect the commissions above in each earner's running balance.
 await supabase.from('profiles').update({ commission_balance: 160, total_commission_earned: 160 }).eq('id', uid.divya)
-await supabase.from('profiles').update({ commission_balance: 120, total_commission_earned: 620 }).eq('id', uid.vishnu)
+await supabase.from('profiles').update({ commission_balance: 0, total_commission_earned: 500 }).eq('id', uid.vishnu)
 
 console.log('Creating reviews...')
 
@@ -545,7 +545,7 @@ Notable test scenarios:
   - ${users.arjun.email}: has a confirmed-but-unpaid booking (bed is locked, ready to pay in /payments)
   - ${users.divya.email}: active + paid tenant, and also earns referrer commission on Sunrise Men's PG
   - ${users.karthik.email}: active + paid tenant on Sunrise Men's PG, left the 5-star review
-  - ${users.vishnu.email}: verified agent connected to Green Valley Co-living, earning bounty + recurring commission
+  - ${users.vishnu.email}: verified agent connected to Green Valley Co-living, earned the ₹500 verification bounty
   - ${users.pendingAgent.email}: unverified agent, sitting in the admin Agents approval queue
   - Budget Boys Hostel is 'pending' verification, with 2 inquiries waiting — for the admin Verification/Properties queues
 `)
