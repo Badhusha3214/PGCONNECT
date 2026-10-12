@@ -89,7 +89,15 @@ export default function ReferrerDashboard() {
   }, [activeNav, loadCommissions]);
 
   const copyCode = () => {
-    navigator.clipboard.writeText(referralUrl || referralCode);
+    console.log("Copying referral code:", referralCode, "or URL:", referralUrl);
+    navigator.clipboard.writeText(referralCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyReferralUrl = () => {
+    console.log("Copying referral URL:", referralUrl);
+    navigator.clipboard.writeText(referralUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -236,7 +244,9 @@ export default function ReferrerDashboard() {
                           <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${stats?.commission_type === opt.type ? "border-blue-500 bg-blue-500" : "border-slate-300"}`}>
                             {stats?.commission_type === opt.type && <div className="w-1.5 h-1.5 bg-white dark:bg-slate-800 rounded-full" />}
                           </div>
-                          <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{opt.label}</p>
+                          <p className="text-sm font-bold text-slate-900 dark:text-slate-100" style={{ color: stats?.commission_type === opt.type ? "var(--pg-primary)" : "var(--pg-text)" }}>
+                            {opt.label}
+                          </p>
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed ml-6">{opt.desc}</p>
                       </button>
@@ -253,7 +263,7 @@ export default function ReferrerDashboard() {
                     <button
                       onClick={handleRequestPayout}
                       disabled={payoutLoading || (stats?.pending_balance ?? 0) < 100}
-                      className="flex items-center gap-2 bg-white dark:bg-slate-800 text-blue-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                      className="flex items-center gap-2 bg-white dark:bg-white text-blue-700 font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                       {payoutLoading ? "Processing..." : "Request Payout"}
                     </button>
                     <p className="text-blue-200 text-xs mt-3">Minimum payout is ₹100. Processed within 2-3 business days.</p>
@@ -398,7 +408,7 @@ export default function ReferrerDashboard() {
                     <div className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 overflow-hidden">
                       <p className="text-sm text-slate-600 dark:text-slate-400 truncate font-mono">{referralUrl || "Loading..."}</p>
                     </div>
-                    <button onClick={copyCode} className="border border-slate-200 dark:border-slate-700 hover:border-blue-400 hover:bg-blue-50 text-slate-700 dark:text-slate-300 font-semibold text-sm px-4 py-3 rounded-xl transition-all cursor-pointer shrink-0">
+                    <button onClick={copyReferralUrl} className="border border-slate-200 dark:border-slate-700 hover:text-blue-600 hover:border-blue-400 hover:bg-blue-50 text-slate-700 dark:text-slate-300 font-semibold text-sm px-4 py-3 rounded-xl transition-all cursor-pointer shrink-0">
                       {copied ? "Copied!" : "Copy Link"}
                     </button>
                   </div>

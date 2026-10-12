@@ -77,6 +77,7 @@ export default function OwnerDashboard() {
   const [inquiryError, setInquiryError] = useState("");
   const [seenInquiryIds, setSeenInquiryIds] = useState([]);
   const [updatingInquiryId, setUpdatingInquiryId] = useState(null);
+  const [selectedInquiry, setSelectedInquiry] = useState(null);
 
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
@@ -232,6 +233,15 @@ export default function OwnerDashboard() {
     setSeenInquiryIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
   };
 
+  const openInquiryMessage = (item) => {
+    setSelectedInquiry(item);
+    markInquirySeen(item?.id);
+  };
+
+  const closeInquiryMessage = () => {
+    setSelectedInquiry(null);
+  };
+
   const handleUpdateInquiryStatus = async (inquiryId, newStatus) => {
     try {
       setUpdatingInquiryId(inquiryId);
@@ -373,7 +383,7 @@ export default function OwnerDashboard() {
                   <p className="px-3.5 py-2 text-xs text-[var(--pg-text-secondary)] truncate border-b border-blue-50">{user?.email}</p>
                   <button
                     onClick={() => { setActiveNav("Settings"); setUserMenuOpen(false); }}
-                    className="w-full text-left px-3.5 py-2 text-sm text-[var(--pg-text)] hover:bg-blue-50 cursor-pointer"
+                    className="w-full text-left px-3.5 py-2 text-sm text-[var(--pg-text)] hover:text-[var(--pg-primary)] hover:bg-blue-50 cursor-pointer"
                   >
                     Account Settings
                   </button>
@@ -582,7 +592,7 @@ export default function OwnerDashboard() {
                 </div>
 
                 {/* OWNER INQUIRIES */}
-                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl mb-6 overflow-hidden">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl mb-6 overflow-hidden">
                   <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-col gap-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                       <div>
@@ -619,14 +629,30 @@ export default function OwnerDashboard() {
                             ))}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                           {filteredInquiries.map((item) => (
-                            <tr key={item.id} className={`hover:bg-[var(--pg-bg)]/70 transition-colors ${isSeen(item) ? "" : "bg-amber-50/30"}`}>
+                            <tr key={item.id} className={`hover:bg-[var(--pg-bg)]/70 transition-colors ${isSeen(item) ? "" : "bg-amber-50/30 dark:bg-amber-950/30"}`}>
                               <td className="px-6 py-4 text-sm font-semibold text-[var(--pg-text)]">{item?.name || "-"}</td>
-                              <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{item?.properties?.name || "-"}</td>
-                              <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{item?.phone || "-"}</td>
-                              <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{formatDate(item?.move_in)}</td>
-                              <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400 max-w-xs truncate">{item?.message || "-"}</td>
+                              <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200">{item?.properties?.name || "-"}</td>
+                              <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200">{item?.phone || "-"}</td>
+                              <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-200">{formatDate(item?.move_in)}</td>
+                              <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-300 max-w-xs">
+                                {item?.message ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openInquiryMessage(item)}
+                                    className="w-full text-left rounded-lg px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    title="Click to read full message"
+                                  >
+                                    <span className="block truncate">{item.message}</span>
+                                    <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--pg-primary)] dark:text-blue-300">
+                                      Click to read full message
+                                    </span>
+                                  </button>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
                               <td className="px-6 py-4">
                                 <select
                                   value={item?.status || "new"}
@@ -635,13 +661,13 @@ export default function OwnerDashboard() {
                                     markInquirySeen(item.id);
                                     handleUpdateInquiryStatus(item.id, e.target.value);
                                   }}
-                                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 ${item?.status === "closed" ? "bg-[var(--pg-bg)] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 focus:ring-slate-100" : item?.status === "contacted" ? "bg-green-50 text-green-700 border-green-200 focus:ring-green-100" : item?.status === "seen" ? "bg-amber-50 text-amber-700 border-amber-200 focus:ring-amber-100" : "bg-[var(--pg-chip-bg)] text-blue-700 border-blue-200 focus:ring-blue-100"}`}>
+                                  className={`text-[11px] font-bold px-2.5 py-1 rounded-full border cursor-pointer outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 ${item?.status === "closed" ? "bg-[var(--pg-bg)] text-slate-600 dark:bg-slate-900 dark:text-slate-300 border-slate-200 dark:border-slate-700 focus:ring-slate-100 dark:focus:ring-slate-800" : item?.status === "contacted" ? "bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-200 border-green-200 dark:border-green-800 focus:ring-green-100 dark:focus:ring-green-900" : item?.status === "seen" ? "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-200 border-amber-200 dark:border-amber-800 focus:ring-amber-100 dark:focus:ring-amber-900" : "bg-[var(--pg-chip-bg)] text-blue-700 dark:bg-blue-950/50 dark:text-blue-200 border-blue-200 dark:border-blue-800 focus:ring-blue-100 dark:focus:ring-blue-900"}`}>
                                   <option value="new">new</option>
                                   <option value="contacted">contacted</option>
                                   <option value="closed">closed</option>
                                 </select>
                               </td>
-                              <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{formatDate(item?.created_at)}</td>
+                              <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-300">{formatDate(item?.created_at)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -650,6 +676,46 @@ export default function OwnerDashboard() {
                   )}
                 </div>
               </>
+            )}
+
+            {selectedInquiry && (
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4 py-6">
+                <button
+                  type="button"
+                  aria-label="Close inquiry message"
+                  onClick={closeInquiryMessage}
+                  className="absolute inset-0 z-[9999] bg-black/70 backdrop-blur-sm"
+                />
+                <div className="relative z-[10000] w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden">
+                  <div className="flex items-start justify-between gap-4 px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Inquiry Message</p>
+                      <h3 className="mt-1 text-lg font-bold text-[var(--pg-text)]">{selectedInquiry.name || "Student inquiry"}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        {selectedInquiry.properties?.name || "Property"} {selectedInquiry.phone ? `• ${selectedInquiry.phone}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeInquiryMessage}
+                      className="rounded-xl p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      aria-label="Close popup"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="px-5 sm:px-6 py-5">
+                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/60 p-4 sm:p-5">
+                      <p className="text-sm leading-7 text-slate-700 dark:text-slate-200 whitespace-pre-wrap break-words">
+                        {selectedInquiry.message || "No message provided."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* BOOKINGS TAB */}
@@ -697,7 +763,7 @@ export default function OwnerDashboard() {
                               <p className="text-xs text-slate-500 dark:text-slate-400">{b.tenant?.phone || "-"}</p>
                             </td>
                             <td className="px-6 py-4">
-                              <p className="text-sm font-semibold text-slate-800">{b.properties?.name}</p>
+                              <p className="text-sm font-semibold text-slate-800 dark:text-slate-300">{b.properties?.name}</p>
                               <p className="text-xs text-slate-500 dark:text-slate-400">{b.room_type}</p>
                             </td>
                             <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300">{formatDate(b.move_in_date)}</td>
