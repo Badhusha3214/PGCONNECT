@@ -27,7 +27,7 @@ export default function Referral() {
     return () => { mounted = false; };
   }, []);
 
-  const display = link ? link.replace(/^https?:\/\//, "") : "pgconnect / r / your-code";
+  const display = link ? link.replace(/^https?:\/\//, "") : "pgcon / r / your-code";
 
   const copy = async () => {
     if (!link) return;
@@ -85,7 +85,7 @@ export default function Referral() {
             {step("#FFC447", <span className="font-extrabold text-lg" style={{ color: "#2A1C00" }}>2%</span>, "You earn monthly", "bed-free")}
           </div>
           <p className="m-0 text-[13px] leading-normal" style={{ color: "#5B6762" }}>
-            Commission is paid on rent collected through PG Connect. Full terms: <Link href="/how-it-works#referral">how referrals work</Link>.
+            Commission is paid on rent collected through PGCON. Full terms: <Link href="/how-it-works#referral">how referrals work</Link>.
           </p>
         </div>
       </div>

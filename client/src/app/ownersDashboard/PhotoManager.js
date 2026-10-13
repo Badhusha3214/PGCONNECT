@@ -10,12 +10,15 @@ export default function PhotoManager({ property, onChanged }) {
   const [photos, setPhotos] = useState(() => (property.property_images || []).slice().sort(byPosition));
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [done, setDone] = useState("");
 
-  const run = async (label, action) => {
+  const run = async (label, action, successText) => {
     setError("");
+    setDone("");
     setBusy(label);
     try {
       await action();
+      if (successText) setDone(successText);
       onChanged?.();
     } catch (e) {
       setError(e.message || "Something went wrong. Please try again.");
@@ -29,12 +32,13 @@ export default function PhotoManager({ property, onChanged }) {
     const room = MAX_PHOTOS - photos.length;
     if (picked.length === 0) { setError("Choose JPG, PNG or WebP photos."); return; }
     if (room <= 0) { setError(`A PG can have up to ${MAX_PHOTOS} photos. Remove one first.`); return; }
-    run("Uploading…", async () => {
+    const count = Math.min(picked.length, room);
+    run(`Uploading ${count} photo${count === 1 ? "" : "s"}…`, async () => {
       const files = await Promise.all(picked.slice(0, room).map(compressPhoto));
       const res = await addPropertyPhotos(property.id, files);
       setPhotos((prev) => [...prev, ...(res.images || [])].sort(byPosition));
       if (picked.length > room) setError(`Only ${room} more photo${room === 1 ? "" : "s"} could be added (limit ${MAX_PHOTOS}).`);
-    });
+    }, `${count} photo${count === 1 ? "" : "s"} added — students can see ${count === 1 ? "it" : "them"} now.`);
   };
 
   const remove = (photo) => {
@@ -42,7 +46,7 @@ export default function PhotoManager({ property, onChanged }) {
     run("Removing…", async () => {
       await deletePropertyPhoto(property.id, photo.id);
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
-    });
+    }, "Photo removed.");
   };
 
   const makeCover = (photo) => {
@@ -50,7 +54,7 @@ export default function PhotoManager({ property, onChanged }) {
     run("Saving…", async () => {
       await reorderPropertyPhotos(property.id, ordered.map((p) => p.id));
       setPhotos(ordered);
-    });
+    }, "Cover photo updated — it's now the first photo in search.");
   };
 
   return (
@@ -74,6 +78,7 @@ export default function PhotoManager({ property, onChanged }) {
       </div>
 
       {error && <p role="alert" className="m-0 mb-3 text-xs text-red-600">{error}</p>}
+      {done && !error && <p role="status" className="m-0 mb-3 text-xs font-semibold text-green-700">{done}</p>}
 
       {photos.length === 0 ? (
         <p className="m-0 text-sm text-[var(--pg-text-tertiary)]">No photos yet — add a few so students can see your rooms.</p>

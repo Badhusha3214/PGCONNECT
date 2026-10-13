@@ -4,7 +4,7 @@ import { apiGet } from "../lib/serverApi";
 import { INTRO_SEEN_SCRIPT } from "./home/IntroLoader";
 
 export const metadata = pageMetadata({
-  absoluteTitle: "Verified PGs & Hostels in Kerala | PG Connect",
+  absoluteTitle: "Verified PGs & Hostels in Kerala | PGCON",
   description: "Verified PGs, hostels and co-living in Kochi, Thiruvananthapuram, Kozhikode, Thrissur and across Kerala. Compare rent, amenities and live bed availability.",
   path: "/",
 });

@@ -70,7 +70,7 @@ const notifyOwner = async (
     html: `
       <div style="font-family:Arial,sans-serif;font-size:15px;color:#222;max-width:520px">
         <p>Hi ${escapeHtml(ownerName || 'there')},</p>
-        <p>You have a new inquiry for <b>${escapeHtml(property.name)}</b> on PG Connect.</p>
+        <p>You have a new inquiry for <b>${escapeHtml(property.name)}</b> on PGCON.</p>
         <table>${row('Name', inquiry.name)}${row('Phone', inquiry.phone)}${row('Move-in', inquiry.move_in)}${row('Message', inquiry.message)}</table>
         <p><a href="${escapeHtml(env.CLIENT_URL)}/ownersDashboard" style="color:#1D4ED8">View it in your dashboard</a></p>
         <p style="color:#888;font-size:12px">Reply to the tenant quickly — fast responses fill beds.</p>

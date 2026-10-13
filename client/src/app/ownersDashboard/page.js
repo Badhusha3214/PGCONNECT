@@ -18,6 +18,7 @@ import {
 } from "../api";
 import ListingStatus from "./ListingStatus";
 import PhotoManager from "./PhotoManager";
+import Toast, { useToast } from "../components/Toast";
 import KycSection from "./KycSection";
 import { LogoMark } from "../components/Logo";
 
@@ -63,6 +64,7 @@ export default function OwnerDashboard() {
   const [inquirySearch, setInquirySearch] = useState("");
   const [activeNav, setActiveNav] = useState("Dashboard");
   const [photosOpenId, setPhotosOpenId] = useState(null);
+  const [toast, showToast] = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useDismissableOverlay(sidebarOpen, () => setSidebarOpen(false));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -252,10 +254,17 @@ export default function OwnerDashboard() {
         prev.map((item) => (item.id === inquiryId ? { ...item, status: newStatus } : item))
       );
     } catch (error) {
-      alert(`Failed to update status: ${error?.message || "Unknown error"}`);
+      showToast(`Couldn't update the inquiry: ${error?.message || "please try again."}`, "error");
     } finally {
       setUpdatingInquiryId(null);
     }
+  };
+
+  const BOOKING_STATUS_MESSAGES = {
+    confirmed: "Booking confirmed — a bed is held and the student can now pay the first month's rent.",
+    active: "Booking marked active.",
+    completed: "Booking marked completed.",
+    cancelled: "Booking cancelled — the bed is free again.",
   };
 
   const handleUpdateBookingStatus = async (bookingId, newStatus) => {
@@ -265,8 +274,9 @@ export default function OwnerDashboard() {
       setBookings((prev) =>
         prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
       );
+      showToast(BOOKING_STATUS_MESSAGES[newStatus] || "Booking updated.");
     } catch (error) {
-      alert(`Failed to update booking status: ${error?.message || "Unknown error"}`);
+      showToast(`Couldn't update the booking: ${error?.message || "please try again."}`, "error");
     } finally {
       setUpdatingBookingId(null);
     }
@@ -354,7 +364,7 @@ export default function OwnerDashboard() {
           </button>
 
           <div className="lg:hidden">
-            <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
+            <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
           </div>
 
           <div className="hidden lg:flex items-center gap-1 ml-4">
@@ -414,14 +424,14 @@ export default function OwnerDashboard() {
           `}>
             <div className="hidden lg:block px-5 pt-6 pb-4">
               <button onClick={() => router.push("/")} className="cursor-pointer">
-                <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
+                <p className="font-bold text-base leading-tight" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Owner Portal</p>
               </button>
             </div>
 
             <div className="lg:hidden flex items-center justify-between px-5 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <p className="font-serif-display text-[var(--pg-primary)] text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
+                <p className="font-serif-display text-[var(--pg-primary)] text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400 font-semibold">Owner Portal</p>
               </div>
               <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className="p-3 text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-400">
@@ -461,6 +471,7 @@ export default function OwnerDashboard() {
 
           {/* ── MAIN CONTENT ── */}
           <main id="main-content" className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 min-w-0">
+            <Toast toast={toast} onClose={() => showToast(null)} />
 
             {activeNav === "Dashboard" && (
               <>
@@ -577,15 +588,27 @@ export default function OwnerDashboard() {
                             <p className="text-sm font-semibold text-[var(--pg-text)] truncate">{p.name}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{p.city}</p>
                             <ListingStatus property={p} fee={listingFee} onPaid={reloadProperties} />
-                            <button
-                              type="button"
-                              onClick={() => setPhotosOpenId((id) => (id === p.id ? null : p.id))}
-                              aria-expanded={photosOpenId === p.id}
-                              className="mt-1.5 text-[11px] font-bold cursor-pointer"
-                              style={{ color: "var(--pg-terracotta)" }}
-                            >
-                              {photosOpenId === p.id ? "Close photos" : `Photos (${p.property_images?.length ?? 0})`}
-                            </button>
+                            <div className="mt-1.5 flex items-center gap-4">
+                              <button
+                                type="button"
+                                onClick={() => setPhotosOpenId((id) => (id === p.id ? null : p.id))}
+                                aria-expanded={photosOpenId === p.id}
+                                className="text-[11px] font-bold cursor-pointer"
+                                style={{ color: "var(--pg-terracotta)" }}
+                              >
+                                {photosOpenId === p.id ? "Close photos" : `Photos (${p.property_images?.length ?? 0})`}
+                              </button>
+                              <a
+                                href={`/property/${p.id}?preview=1`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[11px] font-bold no-underline"
+                                style={{ color: "var(--pg-ink)" }}
+                              >
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                                Preview
+                              </a>
+                            </div>
                           </div>
                           <div className="flex items-center gap-5 shrink-0">
                             <div className="flex items-center gap-1.5" title="Views">
@@ -775,6 +798,11 @@ export default function OwnerDashboard() {
                             <td className="px-6 py-4">
                               <p className="text-sm font-semibold text-[var(--pg-text)]">{b.tenant?.first_name} {b.tenant?.last_name}</p>
                               <p className="text-xs text-slate-500 dark:text-slate-400">{b.tenant?.phone || "-"}</p>
+                              {b.notes && (
+                                <p className="mt-1.5 max-w-[260px] text-xs italic text-[var(--pg-text-secondary)] line-clamp-2" title={b.notes}>
+                                  “{b.notes}”
+                                </p>
+                              )}
                             </td>
                             <td className="px-6 py-4">
                               <p className="text-sm font-semibold text-slate-800 dark:text-slate-300">{b.properties?.name}</p>
@@ -829,7 +857,7 @@ export default function OwnerDashboard() {
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden">
                   <div className="px-5 sm:px-6 py-4 border-b border-slate-100 dark:border-slate-800">
                     <h2 className="text-lg font-bold text-[var(--pg-text)]">Payment History</h2>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Rent payments received through PG Connect, after platform fee.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Rent payments received through PGCON, after platform fee.</p>
                   </div>
                   {payoutsLoading && <div className="px-5 sm:px-6 py-6 text-sm text-slate-500 dark:text-slate-400">Loading payments...</div>}
                   {!payoutsLoading && payoutsError && <div className="px-5 sm:px-6 py-6 text-sm text-red-500">{payoutsError}</div>}
@@ -967,8 +995,8 @@ export default function OwnerDashboard() {
             <footer className="border-t border-slate-200 dark:border-slate-700 pt-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <p className="font-serif-display text-sm font-bold text-[var(--pg-text)]"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">© {new Date().getFullYear()} PG Connect. Curated Student Living.</p>
+                  <p className="font-serif-display text-sm font-bold text-[var(--pg-text)]"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">© {new Date().getFullYear()} PGCON. Curated Student Living.</p>
                 </div>
                 <div className="flex flex-wrap gap-5">
                   {[

@@ -7,7 +7,7 @@ import type { Env } from '../types'
 export const reviewsRouter = new Hono<Env>()
 
 // GET /api/reviews/featured — latest approved 4-5★ reviews with a comment, for the homepage
-reviewsRouter.get('/featured', cache({ cacheName: 'pgconnect-reviews-featured', cacheControl: 'public, max-age=1800' }), async (c) => {
+reviewsRouter.get('/featured', cache({ cacheName: 'pgcon-reviews-featured', cacheControl: 'public, max-age=1800' }), async (c) => {
   const supabase = getSupabase(c.env)
   const { data, error } = await supabase
     .from('reviews')
@@ -25,7 +25,7 @@ reviewsRouter.get('/featured', cache({ cacheName: 'pgconnect-reviews-featured', 
 })
 
 // GET /api/reviews/property/:propertyId — public, approved reviews only
-reviewsRouter.get('/property/:propertyId', cache({ cacheName: 'pgconnect-reviews', cacheControl: 'public, max-age=30' }), async (c) => {
+reviewsRouter.get('/property/:propertyId', cache({ cacheName: 'pgcon-reviews', cacheControl: 'public, max-age=30' }), async (c) => {
   const supabase = getSupabase(c.env)
   const propertyId = c.req.param('propertyId')
   const { page = '1', limit = '10' } = c.req.query()

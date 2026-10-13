@@ -3,7 +3,7 @@ import LegalPage from "../components/LegalPage";
 
 export const metadata = pageMetadata({
   title: "Cookie Policy",
-  description: "Which cookies PG Connect uses and how you can control them.",
+  description: "Which cookies PGCON uses and how you can control them.",
   path: "/cookie-policy",
 });
 
@@ -17,7 +17,7 @@ const SECTIONS = [
   {
     heading: "How We Use Cookies",
     body: [
-      "PG Connect uses essential cookies to keep you signed in between visits and to remember basic preferences, such as filters you've applied while browsing listings.",
+      "PGCON uses essential cookies to keep you signed in between visits and to remember basic preferences, such as filters you've applied while browsing listings.",
     ],
   },
   {

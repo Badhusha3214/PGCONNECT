@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { createInquiry } from "../../api";
+import { createInquiry, getCurrentUser } from "../../api";
+import { getSession } from "../../../lib/supabase";
 
 export default function InquiryForm({ propertyId }) {
   const router = useRouter();
@@ -16,6 +17,23 @@ export default function InquiryForm({ propertyId }) {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState("");
 
+  // Signed-in students shouldn't have to retype their own name and phone.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!(await getSession())) return;
+      try {
+        const { user } = await getCurrentUser();
+        if (!active || !user) return;
+        const name = [user.first_name, user.last_name].filter(Boolean).join(" ");
+        setForm((prev) => ({ ...prev, name: prev.name || name, phone: prev.phone || user.phone || "" }));
+      } catch {
+        // not signed in or profile unavailable — leave the fields for manual entry
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
   const onChange = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -25,7 +43,7 @@ export default function InquiryForm({ propertyId }) {
     setFeedback("");
 
     if (!form.name || !form.phone || !form.moveIn || !form.message) {
-      setFeedback("Please fill all fields before sending inquiry.");
+      setFeedback("Please fill in your name, phone, move-in date and a message.");
       return;
     }
 
@@ -41,8 +59,8 @@ export default function InquiryForm({ propertyId }) {
 
       const response = await createInquiry(payload);
       if (response?.success) {
-        setFeedback("Inquiry sent successfully.");
-        setForm({ name: "", phone: "", moveIn: "", message: "" });
+        setFeedback("Inquiry sent! The owner has been notified and will contact you on the phone number you gave.");
+        setForm((prev) => ({ ...prev, moveIn: "", message: "" }));
       } else {
         setFeedback("Unable to send inquiry right now.");
       }
@@ -52,7 +70,7 @@ export default function InquiryForm({ propertyId }) {
         router.push("/signin");
         return;
       }
-      setFeedback("Failed to send inquiry. Please try again.");
+      setFeedback(error?.message || "We couldn't send your inquiry. Please try again.");
     } finally {
       setSubmitting(false);
     }

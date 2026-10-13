@@ -64,10 +64,13 @@ const getAmenityIconKey = (amenity) => {
   return null;
 };
 
-const getPropertyById = cache(async (id) => {
-  const response = await fetch(`${API_URL}/api/properties/${id}`, {
-    next: { revalidate: 300 },
-  });
+// preview=true is the owner's "see it as students do" view: always fresh, so
+// photos/edits they just made show up immediately, and not counted as a view.
+const getPropertyById = cache(async (id, preview = false) => {
+  const response = await fetch(
+    `${API_URL}/api/properties/${id}${preview ? "?preview=1" : ""}`,
+    preview ? { cache: "no-store" } : { next: { revalidate: 300 } }
+  );
 
   if (!response.ok) {
     return null;
@@ -165,9 +168,13 @@ const buildStructuredData = (property, propertyId, images) => {
   };
 };
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const { id } = await params;
-  const property = await getPropertyById(id);
+  const preview = (await searchParams)?.preview === "1";
+  const property = await getPropertyById(id, preview);
+  if (property && preview) {
+    return { title: `Preview: ${property.name}`, robots: { index: false, follow: false } };
+  }
 
   if (!property) {
     return {
@@ -188,7 +195,7 @@ export async function generateMetadata({ params }) {
   const canonical = `/property/${id}`;
 
   return {
-    // No "| PG Connect" suffix: keeps property titles ~60 chars; brand is in og:site_name.
+    // No "| PGCON" suffix: keeps property titles ~60 chars; brand is in og:site_name.
     title: { absolute: title },
     description,
     keywords: [
@@ -208,7 +215,7 @@ export async function generateMetadata({ params }) {
       url: canonical,
       title,
       description,
-      siteName: "PG Connect",
+      siteName: "PGCON",
       images: [
         {
           url: image,
@@ -225,9 +232,34 @@ export async function generateMetadata({ params }) {
   };
 }
 
-export default async function PropertyDetailPage({ params }) {
+// Shown only in ?preview=1 — tells the owner this is the student view and
+// whether students can actually find the listing yet.
+function PreviewBanner({ property }) {
+  const paidUntil = property.listing_paid_until ? new Date(property.listing_paid_until).getTime() : 0;
+  const live = property.status === "verified" && paidUntil > Date.now();
+  const status = live
+    ? "It's live — students can find it in search."
+    : property.status === "verified"
+      ? "Approved, but hidden from search until the listing fee is paid."
+      : "Waiting for admin approval — students can't find it in search yet.";
+  return (
+    <div role="status" className="border-b" style={{ background: "#FFF4D6", borderColor: "#F2D48A" }}>
+      <div className="mx-auto max-w-[1280px] px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="m-0 text-sm" style={{ color: "#5A3E00" }}>
+          <strong>Preview</strong> — this is how students see your PG. {status}
+        </p>
+        <Link href="/ownersDashboard" className="shrink-0 text-sm font-bold no-underline rounded-full px-4 py-2 text-white" style={{ background: "var(--pg-ink)" }}>
+          ← Back to dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default async function PropertyDetailPage({ params, searchParams }) {
   const { id } = await params;
-  const property = await getPropertyById(id);
+  const preview = (await searchParams)?.preview === "1";
+  const property = await getPropertyById(id, preview);
 
   if (!property) notFound();
 
@@ -265,6 +297,8 @@ export default async function PropertyDetailPage({ params }) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([schema, breadcrumbSchema]) }} />
 
       <Navbar />
+
+      {preview && <PreviewBanner property={property} />}
 
       <main id="main-content" className="mx-auto max-w-[1280px] px-4 sm:px-6 pt-8 pb-24">
         <nav aria-label="Breadcrumb" className="mb-6">
@@ -417,7 +451,7 @@ export default async function PropertyDetailPage({ params }) {
 
           {/* Sticky action column */}
           <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
-            <BookingForm propertyId={id} rooms={rooms} />
+            <BookingForm propertyId={id} rooms={rooms} gender={property.gender} />
             <InquiryForm propertyId={id} />
             <div className="rounded-[30px] p-7 flex items-center gap-4" style={{ background: "var(--pg-terracotta)", color: "#fff" }}>
               <span className="w-12 h-12 rounded-2xl grid place-items-center shrink-0" style={{ background: "rgba(255,255,255,.16)" }}>

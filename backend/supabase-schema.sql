@@ -1,4 +1,4 @@
--- PG Connect — Supabase PostgreSQL Schema
+-- PGCON — Supabase PostgreSQL Schema
 -- Run this entire file once in the Supabase SQL editor.
 
 -- ─── PROFILES ────────────────────────────────────────────────────────────────

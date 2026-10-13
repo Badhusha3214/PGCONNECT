@@ -20,6 +20,7 @@ import {
   logout,
 } from "../api";
 import KycReview from "./KycReview";
+import Toast, { useToast } from "../components/Toast";
 import { LogoMark } from "../components/Logo";
 
 const VERIFICATION_STATUSES = [
@@ -53,6 +54,16 @@ const iconProps = { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", 
 const PeopleIcon = ({ className }) => <svg className={className} {...iconProps}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
 const WarningIcon = ({ className }) => <svg className={className} {...iconProps}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
 const HouseIcon = ({ className }) => <svg className={className} {...iconProps}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+
+// Opens the listing exactly as students will see it, without counting a view.
+function PreviewLink({ id }) {
+  return (
+    <a href={`/property/${id}?preview=1`} target="_blank" rel="noopener noreferrer"
+      className="text-[11px] font-bold no-underline" style={{ color: "var(--pg-terracotta)" }}>
+      Preview ↗
+    </a>
+  );
+}
 
 function StatusBadge({ status }) {
   const styles = {
@@ -252,14 +263,24 @@ export default function AdminPanel() {
     setRefreshing(false);
   };
 
+  // Brief confirmation after an admin action, plus a fresh stats read so the
+  // "Pending Verifications" card doesn't go stale.
+  const [toast, showToast] = useToast();
+  const afterVerify = (res, action) => {
+    showToast(res?.message || (action === "enable" ? "Property enabled" : "Property disabled"));
+    getAdminStats().then((s) => { if (s.success) setStats(s.stats); }).catch(() => {});
+  };
+  const showError = (what, e) => showToast(`Couldn't ${what}: ${e?.message || "please try again."}`, "error");
+
   const handleVerify = async (propertyId, action) => {
     try {
       setActioningId(propertyId);
-      await verifyProperty(propertyId, action);
+      const res = await verifyProperty(propertyId, action);
       setQueue((prev) => prev.filter((p) => p.id !== propertyId));
       setQueueTotal((t) => t - 1);
+      afterVerify(res, action);
     } catch (e) {
-      alert(`Failed: ${e.message}`);
+      showError(action === "enable" ? "enable the property" : "disable the property", e);
     } finally {
       setActioningId(null);
     }
@@ -275,8 +296,9 @@ export default function AdminPanel() {
       const res = await toggleUser(userId);
       if (res.success) {
         setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, is_active: !u.is_active } : u));
+        showToast(res.message || "User updated");
       }
-    } catch (e) { alert(`Failed: ${e.message}`); }
+    } catch (e) { showError("update the user", e); }
   };
 
   const handleVerifyAgent = async (agentId, action) => {
@@ -285,9 +307,10 @@ export default function AdminPanel() {
       const res = await verifyAgent(agentId, action);
       if (res.success) {
         setAgents((prev) => prev.map((a) => a.id === agentId ? { ...a, is_verified_agent: action === "verify" } : a));
+        showToast(action === "verify" ? "Agent approved — their code is now active." : "Agent access revoked.");
       }
     } catch (e) {
-      alert(`Failed: ${e.message}`);
+      showError(action === "verify" ? "approve the agent" : "update the agent", e);
     } finally {
       setAgentActioningId(null);
     }
@@ -299,8 +322,9 @@ export default function AdminPanel() {
       await moderateReview(reviewId, action);
       setReviews((prev) => prev.filter((r) => r.id !== reviewId));
       setReviewsTotal((t) => t - 1);
+      showToast(action === "approve" ? "Review published." : "Review rejected.");
     } catch (e) {
-      alert(`Failed: ${e.message}`);
+      showError("moderate the review", e);
     } finally {
       setModeratingId(null);
     }
@@ -309,16 +333,17 @@ export default function AdminPanel() {
   const handleVerificationAction = async (propertyId, action) => {
     try {
       setVerificationActioningId(propertyId);
-      await verifyProperty(propertyId, action);
+      const res = await verifyProperty(propertyId, action);
       setVerificationQueue((prev) => prev.filter((p) => p.id !== propertyId));
       setVerificationTotal((t) => Math.max(0, t - 1));
+      afterVerify(res, action);
       // The Dashboard's queue always shows "pending" — keep it in sync if that's what's showing here too.
       if (verificationStatus === "pending") {
         setQueue((prev) => prev.filter((p) => p.id !== propertyId));
         setQueueTotal((t) => Math.max(0, t - 1));
       }
     } catch (e) {
-      alert(`Failed: ${e.message}`);
+      showError(action === "enable" ? "enable the property" : "disable the property", e);
     } finally {
       setVerificationActioningId(null);
     }
@@ -376,7 +401,7 @@ export default function AdminPanel() {
             </svg>
           </button>
           <div className="lg:hidden">
-            <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}>PG Connect Admin</p>
+            <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}>PGCON Admin</p>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
@@ -388,7 +413,7 @@ export default function AdminPanel() {
             </button>
             <div className="hidden sm:block text-right">
               <p className="text-sm font-bold leading-tight" style={{ color: "var(--pg-primary)" }}>
-                {settingsUser ? `${settingsUser.first_name} ${settingsUser.last_name}` : "PG Connect Admin"}
+                {settingsUser ? `${settingsUser.first_name} ${settingsUser.last_name}` : "PGCON Admin"}
               </p>
             </div>
             <div className="relative">
@@ -438,11 +463,11 @@ export default function AdminPanel() {
             ${sidebarOpen ? "translate-x-0 slide-in" : "-translate-x-full lg:translate-x-0"}
           `}>
             <div className="hidden lg:block px-5 pt-5 pb-4 border-b border-blue-50">
-              <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
+              <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
               <p className="text-[9px] uppercase tracking-widest font-semibold mt-0.5" style={{ color: "var(--pg-text-tertiary)" }}>Admin Portal</p>
             </div>
             <div className="lg:hidden flex items-center justify-between px-5 pt-5 pb-4 border-b border-blue-50">
-              <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}>PG Connect Admin</p>
+              <p className="font-bold text-sm" style={{ color: "var(--pg-primary)" }}>PGCON Admin</p>
               <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className="p-3 cursor-pointer" style={{ color: "var(--pg-text-tertiary)" }}>
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -470,13 +495,14 @@ export default function AdminPanel() {
 
           {/* MAIN */}
           <main id="main-content" className="flex-1 overflow-y-auto min-w-0">
+            <Toast toast={toast} onClose={() => showToast(null)} />
             <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-[1200px]">
 
               {/* Page title */}
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-7">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: "var(--pg-text)" }}>Platform Overview</h1>
-                  <p className="text-sm mt-1" style={{ color: "var(--pg-text-secondary)" }}>Real-time metrics for PG Connect.</p>
+                  <p className="text-sm mt-1" style={{ color: "var(--pg-text-secondary)" }}>Real-time metrics for PGCON.</p>
                 </div>
                 <button onClick={handleRefresh}
                   className="flex items-center gap-2 active:scale-[0.98] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0" style={{ background: "var(--pg-primary)" }}>
@@ -546,7 +572,10 @@ export default function AdminPanel() {
                                         <img src={p.property_images[0].image_url} alt={p.name} className="w-full h-full object-cover"/>
                                       </div>
                                     )}
-                                    <span className="text-sm font-semibold text-[var(--pg-text)]">{p.name}</span>
+                                    <div className="min-w-0">
+                                      <span className="block text-sm font-semibold text-[var(--pg-text)]">{p.name}</span>
+                                      <PreviewLink id={p.id} />
+                                    </div>
                                   </div>
                                 </td>
                                 <td className="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-400">
@@ -982,7 +1011,10 @@ export default function AdminPanel() {
                                       <img src={p.property_images[0].image_url} alt={p.name} className="w-full h-full object-cover"/>
                                     </div>
                                   )}
-                                  <span className="text-sm font-semibold text-[var(--pg-text)]">{p.name}</span>
+                                  <div className="min-w-0">
+                                    <span className="block text-sm font-semibold text-[var(--pg-text)]">{p.name}</span>
+                                    <PreviewLink id={p.id} />
+                                  </div>
                                 </div>
                               </td>
                               <td className="px-5 py-3.5 text-sm text-slate-600 dark:text-slate-400">
@@ -1117,8 +1149,8 @@ export default function AdminPanel() {
 
               {/* Footer */}
               <div className="border-t pt-5 mt-8 flex items-center justify-between" style={{ borderColor: "var(--pg-border-soft)" }}>
-                <p className="text-sm font-bold" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
-                <p className="text-xs" style={{ color: "var(--pg-text-tertiary)" }}>&copy; {new Date().getFullYear()} PG Connect.</p>
+                <p className="text-sm font-bold" style={{ color: "var(--pg-primary)" }}><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
+                <p className="text-xs" style={{ color: "var(--pg-text-tertiary)" }}>&copy; {new Date().getFullYear()} PGCON.</p>
               </div>
             </div>
           </main>

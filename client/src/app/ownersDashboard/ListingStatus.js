@@ -22,6 +22,13 @@ const describe = (p) => {
   const paidUntil = p.listing_paid_until ? new Date(p.listing_paid_until) : null;
   const daysLeft = paidUntil ? Math.ceil((paidUntil.getTime() - Date.now()) / DAY) : null;
 
+  if (p.status === "unlisted") {
+    return {
+      tone: "warn",
+      text: p.rejection_reason ? `Disabled by admin — ${p.rejection_reason}` : "Disabled by admin — hidden from search. Contact support.",
+      canPay: false,
+    };
+  }
   if (p.status !== "verified") {
     return { tone: "muted", text: "Awaiting admin approval", canPay: false };
   }
@@ -61,7 +68,7 @@ export default function ListingStatus({ property, fee = 1000, onPaid }) {
         key: order.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: Math.round(order.amount * 100),
         currency: "INR",
-        name: "PG Connect",
+        name: "PGCON",
         description: `Annual listing — ${property.name}`,
         order_id: order.order_id,
         handler: async (response) => {

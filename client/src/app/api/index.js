@@ -2,6 +2,44 @@ import { supabase, getAuthToken } from '../../lib/supabase'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'
 
+// ── Errors users can act on ───────────────────────────────────────────────────
+export const NETWORK_ERROR = "Couldn't reach PGCON. Check your internet connection and try again."
+
+// Plain-language fallback for when the server didn't send a useful message.
+const friendlyStatusMessage = (status) => {
+  if (status === 401) return 'Your session has expired. Please log in again.'
+  if (status === 403) return "You don't have permission to do that."
+  if (status === 404) return "We couldn't find what you were looking for. It may have been removed."
+  if (status === 413) return 'That upload is too large. Try fewer or smaller photos.'
+  if (status === 429) return 'Too many attempts. Please wait a minute and try again.'
+  if (status >= 500) return 'Something went wrong on our side. Please try again in a moment.'
+  return 'Something went wrong. Please try again.'
+}
+
+// fetch + JSON with consistent, readable errors. Thrown errors carry
+// .status, .code and .data so callers can react to specific cases.
+const request = async (url, options = {}) => {
+  let res
+  try {
+    res = await fetch(url, options)
+  } catch {
+    const err = new Error(NETWORK_ERROR)
+    err.status = 0
+    throw err
+  }
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    // "Internal server error" is our generic 500 text — not useful to show.
+    const serverMessage = data?.message && data.message !== 'Internal server error' ? data.message : null
+    const err = new Error(serverMessage || friendlyStatusMessage(res.status))
+    err.status = res.status
+    err.code = data?.code
+    err.data = data
+    throw err
+  }
+  return data
+}
+
 // ── Authenticated fetch helper ────────────────────────────────────────────────
 const authFetch = async (path, options = {}) => {
   const token = await getAuthToken()
@@ -10,46 +48,23 @@ const authFetch = async (path, options = {}) => {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers ?? {}),
   }
-
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers })
-  const data = await res.json()
-
-  if (!res.ok) {
-    const err = new Error(data?.message || 'Request failed')
-    err.status = res.status
-    err.data = data
-    throw err
-  }
-  return data
+  return request(`${BASE_URL}${path}`, { ...options, headers })
 }
 
 const authFetchForm = async (path, formData) => {
   const token = await getAuthToken()
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
-  const res = await fetch(`${BASE_URL}${path}`, { method: 'POST', headers, body: formData })
-  const data = await res.json()
-  if (!res.ok) {
-    const err = new Error(data?.message || 'Request failed')
-    err.status = res.status
-    throw err
-  }
-  return data
+  return request(`${BASE_URL}${path}`, { method: 'POST', headers, body: formData })
 }
 
 // ── AUTH (Supabase client-side) ───────────────────────────────────────────────
 export const userRegister = async ({ email, password, first_name, last_name, role, phone, university }) => {
   // Step 1: register with Supabase Auth + create profile via backend
-  const res = await fetch(`${BASE_URL}/api/auth/register`, {
+  const data = await request(`${BASE_URL}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, first_name, last_name, role, phone, university }),
   })
-  const data = await res.json()
-  if (!res.ok) {
-    const err = new Error(data?.message || 'Registration failed')
-    err.code = data?.code
-    throw err
-  }
 
   // Step 2: sign in to get session (only when no email confirmation is required)
   if (data.token) {
@@ -59,21 +74,31 @@ export const userRegister = async ({ email, password, first_name, last_name, rol
 }
 
 export const resendConfirmation = async (email) => {
-  const res = await fetch(`${BASE_URL}/api/auth/resend-confirmation`, {
+  return request(`${BASE_URL}/api/auth/resend-confirmation`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
   })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data?.message || 'Could not send the email')
-  return data
+}
+
+// Supabase's auth errors, reworded for people rather than developers.
+const loginErrorMessage = (error) => {
+  if (error.code === 'invalid_credentials' || /invalid login credentials/i.test(error.message)) {
+    return 'Incorrect email or password. Check for typos, or use "Forgot password?" to reset it.'
+  }
+  if (/fetch|network/i.test(error.message)) return NETWORK_ERROR
+  if (error.status === 429 || /rate limit|too many/i.test(error.message)) {
+    return 'Too many login attempts. Please wait a few minutes and try again.'
+  }
+  return error.message
 }
 
 export const userLogin = async ({ email, password }) => {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
   if (error) {
-    const err = new Error(error.message)
-    err.code = error.code === 'email_not_confirmed' || /not confirmed/i.test(error.message) ? 'email_not_confirmed' : error.code
+    const unconfirmed = error.code === 'email_not_confirmed' || /not confirmed/i.test(error.message)
+    const err = new Error(loginErrorMessage(error))
+    err.code = unconfirmed ? 'email_not_confirmed' : error.code
     throw err
   }
 

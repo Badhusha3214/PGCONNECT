@@ -19,7 +19,7 @@ export default function IntroLoader() {
             <span style={{ width: 8, height: 12, borderRadius: 3, background: "rgba(255,255,255,.3)" }} />
             <span style={{ width: 8, height: 12, borderRadius: 3, background: "#FFC447", boxShadow: "0 0 10px #FFC447" }} />
           </span>
-          <span className="display font-extrabold text-[19px] tracking-[-0.02em]">PG Connect</span>
+          <span className="display font-extrabold text-[19px] tracking-[-0.02em]">PGCON</span>
         </div>
         <svg viewBox="0 0 240 200" style={{ width: 260, height: "auto", overflow: "visible" }}>
           <g className="ld-wall" stroke="#EDE7D6" strokeWidth="4" fill="none" strokeLinecap="square">

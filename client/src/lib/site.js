@@ -7,11 +7,11 @@ if (!process.env.NEXT_PUBLIC_SITE_URL && process.env.NODE_ENV === "production") 
 }
 
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
-export const SITE_NAME = "PG Connect";
-export const DEFAULT_OG_IMAGE = { url: "/og", width: 1200, height: 630, alt: "PG Connect — verified PGs and hostels in Kerala" };
+export const SITE_NAME = "PGCON";
+export const DEFAULT_OG_IMAGE = { url: "/og", width: 1200, height: 630, alt: "PGCON — verified PGs and hostels in Kerala" };
 
 // Builds title/description/canonical/Open Graph/Twitter together so they never
-// drift apart. `title` is run through the root "%s | PG Connect" template unless
+// drift apart. `title` is run through the root "%s | PGCON" template unless
 // `absoluteTitle` is set.
 export function pageMetadata({ title, absoluteTitle, description, path, images, noindex = false }) {
   const fullTitle = absoluteTitle || `${title} | ${SITE_NAME}`;

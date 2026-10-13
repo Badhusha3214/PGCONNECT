@@ -54,7 +54,7 @@ app.route('/api/listing', listingRouter)
 app.route('/api/kyc', kycRouter)
 
 app.get('/api/health', (c) =>
-  c.json({ success: true, message: 'PG Connect API is running', timestamp: new Date().toISOString() })
+  c.json({ success: true, message: 'PGCON API is running', timestamp: new Date().toISOString() })
 )
 
 app.notFound((c) => c.json({ success: false, message: 'Route not found' }, 404))

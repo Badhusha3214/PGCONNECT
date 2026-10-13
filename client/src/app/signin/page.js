@@ -53,13 +53,16 @@ function SignInForm() {
       // students/owners to the page they were trying to reach before signing in.
       if (role === "admin") { router.push("/admin"); return; }
       if (nextPath) { router.push(nextPath); return; }
-      if (role === "student") { router.push("/referrerDashboard"); }
+      // Students come here to find and pay for a bed, so land them on their
+      // bookings; referral earnings are one link away from there.
+      if (role === "student") { router.push("/payments"); }
       else if (role === "owner") { router.push("/ownersDashboard"); }
+      else if (role === "agent") { router.push("/agentDashboard"); }
       else { router.push("/"); }
     } catch (err) {
       setLoading(false);
       if (err?.code === "email_not_confirmed") { setUnconfirmed(true); return; }
-      setError(`Login failed: ${err?.message || "Please try again."}`);
+      setError(err?.message || "Login failed. Please try again.");
     }
   };
 
@@ -67,7 +70,7 @@ function SignInForm() {
     <AuthShell
       eyebrow="Welcome back"
       title="Log in to"
-      accent="PG Connect."
+      accent="PGCON."
       intro="Pick up where you left off — saved PGs, bookings and payments."
       footer={
         <p className="m-0 text-[15px] text-[var(--pg-text-secondary)]">

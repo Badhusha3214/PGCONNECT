@@ -3,12 +3,14 @@ import { LogoMark } from "../components/Logo";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useDismissableOverlay } from "../../lib/useDismissableOverlay";
+import Toast, { useToast } from "../components/Toast";
 import {
   getReferralCode,
   getReferralStats,
   getReferralCommissions,
   updateCommissionType,
   requestPayout,
+  getCurrentUser,
 } from "../api";
 
 const statusStyles = {
@@ -51,6 +53,17 @@ export default function ReferrerDashboard() {
 
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [commTypeLoading, setCommTypeLoading] = useState(false);
+
+  const [toast, showToast] = useToast();
+  const [initials, setInitials] = useState("");
+  useEffect(() => {
+    getCurrentUser()
+      .then((res) => {
+        const u = res?.user;
+        setInitials(`${u?.first_name?.[0] ?? ""}${u?.last_name?.[0] ?? ""}`.toUpperCase());
+      })
+      .catch(() => {});
+  }, []);
 
   const loadStats = useCallback(async () => {
     try {
@@ -106,9 +119,9 @@ export default function ReferrerDashboard() {
     try {
       setPayoutLoading(true);
       const res = await requestPayout();
-      alert(res.message);
+      showToast(res.message || "Payout requested. It's usually processed within 2–3 business days.");
       await loadStats();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message || "Couldn't request a payout. Please try again.", "error"); }
     finally { setPayoutLoading(false); }
   };
 
@@ -117,7 +130,8 @@ export default function ReferrerDashboard() {
       setCommTypeLoading(true);
       await updateCommissionType(type);
       setStats((s) => s ? { ...s, commission_type: type } : s);
-    } catch (e) { alert(e.message); }
+      showToast(type === "recurring" ? "You'll now earn recurring commission." : "You'll now earn a one-time payment per PG.");
+    } catch (e) { showToast(e.message || "Couldn't change your commission type.", "error"); }
     finally { setCommTypeLoading(false); }
   };
 
@@ -143,9 +157,9 @@ export default function ReferrerDashboard() {
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <button onClick={() => router.push("/")} className="lg:block hidden cursor-pointer"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></button>
+          <button onClick={() => router.push("/")} className="lg:block hidden cursor-pointer"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></button>
           <div className="lg:hidden">
-            <p className="font-serif-display text-blue-600 text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
+            <p className="font-serif-display text-blue-600 text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
@@ -153,7 +167,7 @@ export default function ReferrerDashboard() {
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-tight">Referrer Portal</p>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Student</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold shrink-0">ST</div>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold shrink-0">{initials || "•"}</div>
           </div>
         </header>
 
@@ -189,7 +203,10 @@ export default function ReferrerDashboard() {
                 </button>
               ))}
             </nav>
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <button onClick={() => router.push("/payments")} className="w-full flex items-center justify-center gap-2 text-white text-sm font-semibold py-2.5 rounded-xl transition-all cursor-pointer" style={{ background: "var(--pg-terracotta)" }}>
+                My bookings &amp; payments
+              </button>
               <button onClick={() => router.push("/")} className="w-full flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all cursor-pointer">
                 ← Back to Home
               </button>
@@ -198,6 +215,7 @@ export default function ReferrerDashboard() {
 
           {/* MAIN */}
           <main id="main-content" className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 min-w-0">
+            <Toast toast={toast} onClose={() => showToast(null)} />
 
             {/* OVERVIEW */}
             {activeNav === "Overview" && (
@@ -420,9 +438,9 @@ export default function ReferrerDashboard() {
                   <div className="space-y-5">
                     {[
                       { n: 1, title: "Share your link", desc: "Send your unique referral link or code to a PG owner in your area." },
-                      { n: 2, title: "Owner lists their PG", desc: "The owner clicks your link and lists their property on PG Connect. Your code is automatically linked." },
+                      { n: 2, title: "Owner lists their PG", desc: "The owner clicks your link and lists their property on PGCON. Your code is automatically linked." },
                       { n: 3, title: "Tenant books and pays", desc: "A student books the PG and pays rent through the platform." },
-                      { n: 4, title: "You earn 2%", desc: "PG Connect credits 2% of every rent payment to your balance — monthly and recurring." },
+                      { n: 4, title: "You earn 2%", desc: "PGCON credits 2% of every rent payment to your balance — monthly and recurring." },
                     ].map((step) => (
                       <div key={step.n} className="flex items-start gap-4">
                         <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{step.n}</div>

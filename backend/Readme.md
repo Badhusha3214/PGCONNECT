@@ -1,6 +1,6 @@
-# PG Connect — Node.js Backend
+# PGCON — Node.js Backend
 
-REST API built with **Express + MongoDB (Mongoose)** for the PG Connect platform.
+REST API built with **Express + MongoDB (Mongoose)** for the PGCON platform.
 
 ---
 
@@ -31,7 +31,7 @@ Server runs at **http://localhost:5000**
 ## 📁 Project Structure
 
 ```
-pg-connect-backend/
+pgcon-backend/
 ├── src/
 │   ├── index.js                  ← Entry point
 │   ├── config/

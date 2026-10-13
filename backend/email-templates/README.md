@@ -30,8 +30,8 @@ Supabase Dashboard → **Authentication → Emails → Templates**
 
 | Template | Subject | Body |
 |---|---|---|
-| Confirm signup | `Confirm your email for PG Connect` | [`confirm-signup.html`](confirm-signup.html) |
-| Reset Password | `Reset your PG Connect password` | [`reset-password.html`](reset-password.html) |
+| Confirm signup | `Confirm your email for PGCON` | [`confirm-signup.html`](confirm-signup.html) |
+| Reset Password | `Reset your PGCON password` | [`reset-password.html`](reset-password.html) |
 
 The button uses `token_hash`, so the link works even when the email is opened
 on a different phone or laptop from the one that requested it.
@@ -50,7 +50,7 @@ With Resend (already used for owner inquiry emails):
 | Username | `resend` |
 | Password | your Resend API key (same as `RESEND_API_KEY`) |
 | Sender email | e.g. `noreply@your-domain.com` (domain must be verified in Resend) |
-| Sender name | `PG Connect` |
+| Sender name | `PGCON` |
 
 ### 4. Rate limit
 After custom SMTP is on: **Authentication → Rate Limits → "Emails sent per

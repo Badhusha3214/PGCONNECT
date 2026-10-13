@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-// The four "only on PG Connect" features, reproduced exactly from the design
+// The four "only on PGCON" features, reproduced exactly from the design
 // (interactive demos on the design's sample data).
 
 const pill = (on, dark) =>
@@ -293,7 +293,7 @@ export default function Features() {
     <section id="features" className="bg-white pt-28 pb-10" style={{ borderRadius: "48px 48px 0 0" }}>
       <div className="max-w-[1280px] mx-auto px-4 sm:px-6">
         <div className="reveal flex flex-col gap-[18px] max-w-[820px] mb-20">
-          <span className="eyebrow">Only on PG Connect</span>
+          <span className="eyebrow">Only on PGCON</span>
           <h2 className="display m-0 font-extrabold" style={{ fontSize: "clamp(40px, 5.2vw, 76px)", lineHeight: 0.98, letterSpacing: "-0.045em", textWrap: "balance" }}>
             Four things no PG listing has ever told you.
           </h2>

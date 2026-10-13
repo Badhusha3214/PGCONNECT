@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createProperty, getCurrentUser } from "../api";
 import { supabase } from "../../lib/supabase";
@@ -9,8 +9,9 @@ import { MAX_PHOTOS, PHOTO_TYPES, PHOTO_ACCEPT, compressPhoto } from "../../lib/
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-const AMENITIES = ["Wi-Fi", "AC", "Laundry", "Kitchen", "Security", "Gym"];
-const ROOM_TYPES = ["Default", "Single", "Double", "Triple", "More than 3"];
+const AMENITIES = ["Wi-Fi", "AC", "Meals", "Laundry", "Kitchen", "Security", "Gym", "Parking"];
+// Must match the property_rooms.type CHECK constraint (Single/Double/Triple).
+const ROOM_TYPES = ["Single", "Double", "Triple"];
 
 export default function ListProperty() {
   return (
@@ -26,6 +27,8 @@ function ListPropertyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [duplicateId, setDuplicateId] = useState(null);
+  const submitLock = useRef(false);
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [user, setUser] = useState(null);
@@ -67,7 +70,7 @@ function ListPropertyForm() {
 
   const [rooms, setRooms] = useState([
     {
-      type: "Default",
+      type: "Single",
       price: "",
       totalBeds: "",
       description: "",
@@ -130,7 +133,7 @@ function ListPropertyForm() {
     setRooms((prev) => ([
       ...prev,
       {
-        type: "Default",
+        type: "Single",
         price: "",
         totalBeds: "",
         description: "",
@@ -181,7 +184,13 @@ function ListPropertyForm() {
       return;
     }
 
+    // A ref flips synchronously, so even a lightning-fast double click (before
+    // React re-renders the disabled button) can't send the listing twice.
+    if (submitLock.current) return;
+    submitLock.current = true;
+
     setSubmitError("");
+    setDuplicateId(null);
     setSubmitting(true);
 
     try {
@@ -209,11 +218,21 @@ function ListPropertyForm() {
         data: error?.data,
         message: error?.message,
       });
-      setSubmitError(error?.message || "Failed to create property.");
+      if (error?.code === "duplicate_listing") setDuplicateId(error.data?.property_id ?? null);
+      setSubmitError(error?.message || "We couldn't submit your listing. Please try again.");
+      submitLock.current = false;
     } finally {
       setSubmitting(false);
     }
   };
+
+  const submitLabel = submitted
+    ? "✓ Submitted — waiting for admin approval"
+    : submitting
+      ? photos.length > 0
+        ? `Uploading ${photos.length} photo${photos.length === 1 ? "" : "s"}…`
+        : "Creating…"
+      : "Create Property";
 
   return (
     <>
@@ -297,7 +316,7 @@ function ListPropertyForm() {
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">Property Name</label>
                   <input
                     type="text"
-                    placeholder="Nirmal Jyothi"
+                    placeholder="Sree Nilayam PG"
                     value={form.name}
                     onChange={(e) => updateField("name", e.target.value)}
                     required
@@ -309,7 +328,7 @@ function ListPropertyForm() {
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">Tagline</label>
                   <input
                     type="text"
-                    placeholder="Modern co-living in Koramangala"
+                    placeholder="Quiet rooms 5 min from campus"
                     value={form.tagline}
                     onChange={(e) => updateField("tagline", e.target.value)}
                     className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] placeholder-slate-400 outline-none transition-all"
@@ -320,7 +339,7 @@ function ListPropertyForm() {
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">Address</label>
                   <input
                     type="text"
-                    placeholder="5th Block"
+                    placeholder="MC Road, near KSRTC stand"
                     value={form.address}
                     onChange={(e) => updateField("address", e.target.value)}
                     required
@@ -333,7 +352,7 @@ function ListPropertyForm() {
                     <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">City</label>
                     <input
                       type="text"
-                      placeholder="Chanaganassery"
+                      placeholder="Changanacherry"
                       value={form.city}
                       onChange={(e) => updateField("city", e.target.value)}
                       required
@@ -357,7 +376,7 @@ function ListPropertyForm() {
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">Landmark</label>
                   <input
                     type="text"
-                    placeholder="Near Forum Mall"
+                    placeholder="Near St. Berchmans College"
                     value={form.landmark}
                     onChange={(e) => updateField("landmark", e.target.value)}
                     className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] placeholder-slate-400 outline-none transition-all"
@@ -642,6 +661,26 @@ function ListPropertyForm() {
                 </div>
               </section>
 
+              {/* Repeated by the button: the top-of-form copy is off-screen when owners submit. */}
+              {submitError && (
+                <div role="alert" className="bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-4 py-3 rounded-xl">
+                  {submitError}
+                  {duplicateId && (
+                    <span className="block mt-2">
+                      <Link href="/ownersDashboard" className="font-bold underline">Go to Owner Dashboard</Link>
+                      {" · "}
+                      <a href={`/property/${duplicateId}?preview=1`} target="_blank" rel="noopener noreferrer" className="font-bold underline">Preview it</a>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {submitted && (
+                <div role="status" className="bg-green-50 border border-green-200 text-green-800 text-sm font-medium px-4 py-3 rounded-xl">
+                  Your PG has been submitted and is waiting for admin approval. Taking you to its status page…
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-4 rounded-xl bg-[var(--pg-bg)] border border-[var(--pg-border)] px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-[var(--pg-text)]">Ready to list your property?</p>
@@ -658,9 +697,9 @@ function ListPropertyForm() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                       </svg>
-                      Creating…
+                      {submitLabel}
                     </>
-                  ) : submitted ? "✓ Submitted" : "Create Property"}
+                  ) : submitLabel}
                 </button>
               </div>
             </form>

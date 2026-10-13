@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createBooking } from "../../api";
 
-export default function BookingForm({ propertyId, rooms }) {
+const GENDER_NOTE = {
+  Boys: "This is a Boys-only PG.",
+  Girls: "This is a Girls-only PG.",
+};
+
+export default function BookingForm({ propertyId, rooms, gender }) {
   const router = useRouter();
   const availableRooms = rooms.filter((r) => (r.available_beds ?? 0) > 0);
 
@@ -14,6 +19,8 @@ export default function BookingForm({ propertyId, rooms }) {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  // Once a request goes through, lock the form so it can't be sent twice.
+  const [sent, setSent] = useState(false);
 
   const selectedRoom = availableRooms.find((r) => r.type === roomType);
 
@@ -38,10 +45,9 @@ export default function BookingForm({ propertyId, rooms }) {
       if (response?.success) {
         setFeedback({
           type: "success",
-          text: "Booking request sent! Once the owner confirms it, come back to Payments to pay your first month's rent.",
+          text: "Booking request sent! You can track it in My bookings. Once the owner confirms, pay your first month's rent there.",
         });
-        setMoveInDate("");
-        setNotes("");
+        setSent(true);
       } else {
         setFeedback({ type: "error", text: "Unable to request booking right now." });
       }
@@ -68,6 +74,11 @@ export default function BookingForm({ propertyId, rooms }) {
   return (
     <div className="rounded-3xl border border-[var(--pg-border)] bg-white dark:bg-slate-800 p-6 shadow-sm">
       <h2 className="text-xl font-bold text-[var(--pg-text)]">Book Your Stay</h2>
+      {GENDER_NOTE[gender] && (
+        <p className="mt-2 mb-0 text-xs font-semibold rounded-lg px-3 py-2" style={{ background: "#FFF4D6", color: "#5A3E00" }}>
+          {GENDER_NOTE[gender]} Please check before requesting a bed.
+        </p>
+      )}
       <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
         <div>
           <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-1.5">Room Type</label>
@@ -122,7 +133,7 @@ export default function BookingForm({ propertyId, rooms }) {
                   onClick={() => router.push("/payments")}
                   className="mt-2 text-xs font-semibold text-[var(--pg-primary)] hover:underline cursor-pointer"
                 >
-                  Go to Payments →
+                  View my bookings →
                 </button>
               )}
             </motion.div>
@@ -133,10 +144,10 @@ export default function BookingForm({ propertyId, rooms }) {
           whileHover={{ scale: submitting ? 1 : 1.02 }}
           whileTap={{ scale: submitting ? 1 : 0.97 }}
           type="submit"
-          disabled={submitting}
+          disabled={submitting || sent}
           className="w-full rounded-xl bg-[var(--pg-accent)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--pg-accent-dark)] disabled:cursor-not-allowed disabled:opacity-70 shadow-sm hover:shadow-md"
         >
-          {submitting ? "Sending request..." : "Request to Book"}
+          {sent ? "Request sent ✓" : submitting ? "Sending request..." : "Request to Book"}
         </motion.button>
       </form>
     </div>

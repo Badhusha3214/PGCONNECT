@@ -27,7 +27,7 @@ export default function Logo({ size = 38, href = "/", className = "" }) {
   return (
     <Link href={href} className={`inline-flex items-center gap-2.5 no-underline text-[var(--pg-ink)] shrink-0 ${className}`}>
       <LogoMark size={size} />
-      <span className="display font-extrabold tracking-[-0.02em]" style={{ fontSize: Math.round(size * 0.55) }}>PG Connect</span>
+      <span className="display font-extrabold tracking-[-0.02em]" style={{ fontSize: Math.round(size * 0.55) }}>PGCON</span>
     </Link>
   );
 }

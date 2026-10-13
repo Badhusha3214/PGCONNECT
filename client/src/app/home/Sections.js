@@ -181,7 +181,7 @@ export function HowItWorks() {
           </div>
           <div className="flex flex-col gap-2">
             <h3 className="display m-0 text-[28px] font-bold tracking-[-0.03em]">Seamless Move-In</h3>
-            <p className="m-0 text-base" style={{ lineHeight: 1.55, color: "rgba(245,243,238,.8)" }}>Handle all paperwork and first month&apos;s payment securely through PG Connect.</p>
+            <p className="m-0 text-base" style={{ lineHeight: 1.55, color: "rgba(245,243,238,.8)" }}>Handle all paperwork and first month&apos;s payment securely through PGCON.</p>
           </div>
         </li>
       </ol>
@@ -244,7 +244,7 @@ export function ForParents() {
         <div className="reveal flex flex-col gap-[22px] lg:sticky lg:top-[110px]">
           <span className="eyebrow">For parents</span>
           <H2 size="clamp(38px, 4.6vw, 64px)">You&apos;ll see what we saw when we visited.</H2>
-          <p className="m-0 text-lg leading-relaxed text-[var(--pg-text-secondary)] max-w-[460px]">Sending your child to a new town is a big decision. Every PG on PG Connect has been walked through by our team, and you can read the full visit report before a single rupee changes hands.</p>
+          <p className="m-0 text-lg leading-relaxed text-[var(--pg-text-secondary)] max-w-[460px]">Sending your child to a new town is a big decision. Every PG on PGCON has been walked through by our team, and you can read the full visit report before a single rupee changes hands.</p>
           <div className="kasavu w-[120px] mt-2" aria-hidden="true" />
         </div>
         <div className="flex flex-col gap-[18px]">
@@ -278,7 +278,7 @@ export function ForParents() {
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9A6A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z" /></svg>
               </span>
               <h3 className="display m-0 text-[22px] font-bold tracking-[-0.02em]">Reviews from real residents</h3>
-              <p className="m-0 text-[15px] leading-relaxed text-[var(--pg-text-secondary)]">Only students who booked and stayed through PG Connect can leave a review. Owners can reply, but they can&apos;t edit or remove one.</p>
+              <p className="m-0 text-[15px] leading-relaxed text-[var(--pg-text-secondary)]">Only students who booked and stayed through PGCON can leave a review. Owners can reply, but they can&apos;t edit or remove one.</p>
             </div>
           </div>
           <div className="reveal rounded-[30px] px-7 py-[26px] flex flex-wrap items-center justify-between gap-[18px]" style={{ background: "#0F3B33", color: "#F5F3EE" }}>
@@ -378,7 +378,7 @@ export function Testimonials({ reviews }) {
                 <span className="flex flex-col gap-0.5">
                   <span className="font-bold">{reviewerName(r)}</span>
                   <span className="text-[13px]" style={{ color: dark ? "rgba(245,243,238,.7)" : "#5B6762" }}>
-                    {[r.property?.name, r.property?.city].filter(Boolean).join(" · ") || "PG Connect resident"}
+                    {[r.property?.name, r.property?.city].filter(Boolean).join(" · ") || "PGCON resident"}
                   </span>
                 </span>
               </figcaption>

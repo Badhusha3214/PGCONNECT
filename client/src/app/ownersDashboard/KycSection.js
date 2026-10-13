@@ -91,7 +91,7 @@ export default function KycSection() {
         <div>
           <h2 className="text-lg font-bold text-[var(--pg-text)]">Identity verification (KYC)</h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Upload an ID proof so tenants see you as a verified owner. Files are private — only you and the PG Connect team can open them.
+            Upload an ID proof so tenants see you as a verified owner. Files are private — only you and the PGCON team can open them.
           </p>
         </div>
         <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${verified ? STATUS_STYLES.approved : STATUS_STYLES.pending}`}>

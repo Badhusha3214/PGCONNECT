@@ -179,7 +179,7 @@ export default function ListingPending() {
                   {[
                     { label: "Listing submitted", done: true },
                     { label: "Waiting for admin approval (24–48 hrs)", done: false, active: true },
-                    { label: "Published & live on PG Connect", done: false },
+                    { label: "Published & live on PGCON", done: false },
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-3">
                       <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold
@@ -229,6 +229,16 @@ export default function ListingPending() {
                   >
                     {isVerified && propertyId ? "View Property" : "Browse Properties"}
                   </button>
+                  {!isVerified && propertyId && (
+                    <a
+                      href={`/property/${propertyId}?preview=1`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 grid place-items-center border border-[var(--pg-border)] bg-white text-[var(--pg-text)] text-sm font-semibold py-3 rounded-xl no-underline"
+                    >
+                      Preview listing
+                    </a>
+                  )}
                   <button
                     onClick={isVerified ? clearAndRelist : () => router.push("/ownersDashboard")}
                     className="flex-1 border border-[var(--pg-border)] hover:border-[var(--pg-border)] bg-white dark:bg-slate-800 text-[var(--pg-text)] text-sm font-semibold py-3 rounded-xl transition-all cursor-pointer"
@@ -244,7 +254,7 @@ export default function ListingPending() {
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              PG Connect Verified Property Management
+              PGCON Verified Property Management
             </p>
           </div>
         </main>
