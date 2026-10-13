@@ -72,7 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_properties_agent ON properties(agent_id);
 CREATE TABLE IF NOT EXISTS property_rooms (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('Single', 'Double', 'Triple')),
+  type TEXT NOT NULL CHECK (type IN ('Single', 'Double', 'Triple', '4 Sharing', '5+ Sharing')),
   price NUMERIC NOT NULL,
   total_beds INT NOT NULL DEFAULT 1,
   available_beds INT NOT NULL DEFAULT 1,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   property_id UUID NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
-  room_type TEXT NOT NULL CHECK (room_type IN ('Single', 'Double', 'Triple')),
+  room_type TEXT NOT NULL CHECK (room_type IN ('Single', 'Double', 'Triple', '4 Sharing', '5+ Sharing')),
   move_in_date DATE NOT NULL,
   move_out_date DATE,
   monthly_rent NUMERIC NOT NULL,

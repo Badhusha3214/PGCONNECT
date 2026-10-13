@@ -15,9 +15,12 @@ import {
   updatePassword,
   logout,
   getListingConfig,
+  deleteProperty,
 } from "../api";
 import ListingStatus from "./ListingStatus";
 import PhotoManager from "./PhotoManager";
+import RoomManager from "./RoomManager";
+import DetailsEditor from "./DetailsEditor";
 import Toast, { useToast } from "../components/Toast";
 import KycSection from "./KycSection";
 import { LogoMark } from "../components/Logo";
@@ -64,6 +67,8 @@ export default function OwnerDashboard() {
   const [inquirySearch, setInquirySearch] = useState("");
   const [activeNav, setActiveNav] = useState("Dashboard");
   const [photosOpenId, setPhotosOpenId] = useState(null);
+  const [roomsOpenId, setRoomsOpenId] = useState(null);
+  const [editOpenId, setEditOpenId] = useState(null);
   const [toast, showToast] = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarRef = useDismissableOverlay(sidebarOpen, () => setSidebarOpen(false));
@@ -329,6 +334,25 @@ export default function OwnerDashboard() {
     }
   };
 
+  const [deletingId, setDeletingId] = useState(null);
+  const handleDeleteProperty = async (p) => {
+    const ok = window.confirm(
+      `Delete "${p.name}"?\n\nThis permanently removes the listing, its rooms, photos and inquiries. It can't be undone.`
+    );
+    if (!ok) return;
+    setDeletingId(p.id);
+    try {
+      await deleteProperty(p.id);
+      setProperties((prev) => prev.filter((x) => x.id !== p.id));
+      showToast(`"${p.name}" was deleted.`);
+    } catch (err) {
+      // e.g. open bookings or payment history — the server explains what to do.
+      showToast(err.message || "Couldn't delete this PG. Please try again.", "error");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     router.push("/");
@@ -588,7 +612,16 @@ export default function OwnerDashboard() {
                             <p className="text-sm font-semibold text-[var(--pg-text)] truncate">{p.name}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{p.city}</p>
                             <ListingStatus property={p} fee={listingFee} onPaid={reloadProperties} />
-                            <div className="mt-1.5 flex items-center gap-4">
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditOpenId((id) => (id === p.id ? null : p.id))}
+                                aria-expanded={editOpenId === p.id}
+                                className="text-[11px] font-bold cursor-pointer"
+                                style={{ color: "var(--pg-terracotta)" }}
+                              >
+                                {editOpenId === p.id ? "Close editor" : "Edit details"}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setPhotosOpenId((id) => (id === p.id ? null : p.id))}
@@ -597,6 +630,19 @@ export default function OwnerDashboard() {
                                 style={{ color: "var(--pg-terracotta)" }}
                               >
                                 {photosOpenId === p.id ? "Close photos" : `Photos (${p.property_images?.length ?? 0})`}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRoomsOpenId((id) => (id === p.id ? null : p.id))}
+                                aria-expanded={roomsOpenId === p.id}
+                                className="text-[11px] font-bold cursor-pointer"
+                                style={{ color: "var(--pg-terracotta)" }}
+                              >
+                                {roomsOpenId === p.id
+                                  ? "Close rooms"
+                                  : (p.property_rooms?.length ?? 0) === 0
+                                    ? "⚠ Add rooms & beds"
+                                    : `Rooms & beds (${p.total_beds ?? 0} beds)`}
                               </button>
                               <a
                                 href={`/property/${p.id}?preview=1`}
@@ -608,6 +654,14 @@ export default function OwnerDashboard() {
                                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
                                 Preview
                               </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProperty(p)}
+                                disabled={deletingId === p.id}
+                                className="text-[11px] font-bold text-red-600 hover:text-red-700 cursor-pointer disabled:opacity-50"
+                              >
+                                {deletingId === p.id ? "Deleting…" : "Delete"}
+                              </button>
                             </div>
                           </div>
                           <div className="flex items-center gap-5 shrink-0">
@@ -621,7 +675,25 @@ export default function OwnerDashboard() {
                             </div>
                           </div>
                         </div>
+                        {editOpenId === p.id && (
+                          <DetailsEditor
+                            property={p}
+                            onChanged={reloadProperties}
+                            onClose={(message) => {
+                              setEditOpenId(null);
+                              if (message) showToast(message);
+                            }}
+                          />
+                        )}
                         {photosOpenId === p.id && <PhotoManager property={p} onChanged={reloadProperties} />}
+                        {roomsOpenId === p.id && (
+                          // Keyed on room ids so it re-reads saved rooms (and their new ids) after a reload.
+                          <RoomManager
+                            key={(p.property_rooms || []).map((r) => r.id).join(",")}
+                            property={p}
+                            onChanged={reloadProperties}
+                          />
+                        )}
                         </div>
                       ))}
                     </div>

@@ -18,8 +18,81 @@ const publicCache = cache({ cacheName: 'pgcon-properties', cacheControl: 'public
 const MAX_PAGE_SIZE = 100
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-// Must match the property_rooms.type CHECK constraint in supabase-schema.sql.
-const ROOM_TYPES = ['Single', 'Double', 'Triple']
+// Must match the property_rooms.type / bookings.room_type CHECK constraints
+// (migration 006) and ROOM_TYPES in client/src/lib/listing.js.
+const ROOM_TYPES = ['Single', 'Double', 'Triple', '4 Sharing', '5+ Sharing']
+
+type RoomInput = { id?: string; type: string; price: number; total_beds: number; available_beds?: number; description?: string }
+
+// Returns a message if the rooms can't be saved, else null.
+const roomProblem = (list: RoomInput[]): string | null => {
+  if (!Array.isArray(list) || list.length === 0) return 'Add at least one room type'
+  for (const r of list) {
+    const total = Number(r.total_beds)
+    if (!ROOM_TYPES.includes(r.type) || !(Number(r.price) > 0) || !(Number.isInteger(total) && total >= 1)) {
+      return `Each room needs a type (${ROOM_TYPES.join(', ')}), a price and at least 1 bed`
+    }
+    if (r.available_beds !== undefined) {
+      const available = Number(r.available_beds)
+      if (!Number.isInteger(available) || available < 0 || available > total) {
+        return `Available beds for the ${r.type} room must be between 0 and ${total}`
+      }
+    }
+  }
+  if (new Set(list.map((r) => r.type)).size !== list.length) {
+    return 'Each room type can only be added once — change its bed count instead'
+  }
+  return null
+}
+
+type BedRow = { id: string; label: string; status: string; current_booking_id: string | null }
+
+// A bed is "held" when PGCON itself has it: reserved during checkout, on
+// notice, or occupied by a PGCON booking. Owners can't change those.
+const isHeld = (b: BedRow) =>
+  b.status === 'locked' || b.status === 'notice-period' || (b.status === 'occupied' && Boolean(b.current_booking_id))
+
+// Make a room have `total` beds of which `available` are vacant. Beds held by
+// PGCON stay as they are; the rest are vacant or marked occupied by tenants
+// who arranged their stay directly with the owner (occupied, no booking).
+// The beds sync trigger then derives the room/property bed counts.
+const syncRoomBeds = async (
+  supabase: ReturnType<typeof getSupabase>,
+  roomId: string,
+  propertyId: string,
+  total: number,
+  available: number
+) => {
+  const { data } = await supabase.from('beds').select('id, label, status, current_booking_id').eq('room_id', roomId)
+  const beds = (data ?? []) as BedRow[]
+  const heldCount = beds.filter(isHeld).length
+  let pool = beds.filter((b) => !isHeld(b))
+  const poolSize = Math.max(total - heldCount, 0)
+
+  if (pool.length > poolSize) {
+    const extra = pool.slice(poolSize)
+    pool = pool.slice(0, poolSize)
+    await supabase.from('beds').delete().in('id', extra.map((b) => b.id))
+  } else if (pool.length < poolSize) {
+    const labels = new Set(beds.map((b) => b.label))
+    const inserts: Array<{ room_id: string; property_id: string; label: string }> = []
+    for (let n = 1; inserts.length < poolSize - pool.length; n++) {
+      if (!labels.has(`Bed ${n}`)) inserts.push({ room_id: roomId, property_id: propertyId, label: `Bed ${n}` })
+    }
+    const { data: added } = await supabase.from('beds').insert(inserts).select('id, label, status, current_booking_id')
+    pool = [...pool, ...((added ?? []) as BedRow[])]
+  }
+
+  // Change as few beds as possible to reach the requested availability.
+  const vacant = pool.filter((b) => b.status === 'vacant')
+  const offline = pool.filter((b) => b.status !== 'vacant')
+  const target = Math.min(available, pool.length)
+  if (vacant.length > target) {
+    await supabase.from('beds').update({ status: 'occupied' }).in('id', vacant.slice(target).map((b) => b.id))
+  } else if (vacant.length < target) {
+    await supabase.from('beds').update({ status: 'vacant' }).in('id', offline.slice(0, target - vacant.length).map((b) => b.id))
+  }
+}
 
 const MAX_PHOTOS = 10
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
@@ -179,7 +252,7 @@ propertiesRouter.get('/owner/mine', authMiddleware, requireRole('owner', 'admin'
     .from('properties')
     .select(`
       *, property_images(id, image_key, image_url, position),
-      property_rooms(*, beds(id, label, status))
+      property_rooms(*, beds(id, label, status, current_booking_id))
     `)
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
@@ -293,26 +366,16 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
     ? body.amenities.split(',').map((a: string) => a.trim()).filter(Boolean)
     : (body.amenities as string[] | undefined) ?? []
 
-  let rooms: Array<{ type: string; price: number; total_beds: number; description?: string }>
+  let rooms: RoomInput[]
   try {
-    rooms = typeof body.rooms === 'string' ? JSON.parse(body.rooms as string) : (body.rooms as typeof rooms) ?? []
+    rooms = typeof body.rooms === 'string' ? JSON.parse(body.rooms as string) : (body.rooms as RoomInput[]) ?? []
   } catch {
     return c.json({ success: false, message: 'Room details could not be read' }, 400)
   }
   // Check rooms before creating anything, so a bad room never leaves behind a
   // half-made property (which owners then re-submit, creating duplicates).
-  if (!Array.isArray(rooms) || rooms.length === 0) {
-    return c.json({ success: false, message: 'Add at least one room type' }, 400)
-  }
-  const badRoom = rooms.find((r) =>
-    !ROOM_TYPES.includes(r.type) || !(Number(r.price) > 0) || !(Number.isInteger(Number(r.total_beds)) && Number(r.total_beds) >= 1)
-  )
-  if (badRoom) {
-    return c.json({
-      success: false,
-      message: `Each room needs a type (${ROOM_TYPES.join(', ')}), a price and at least 1 bed`,
-    }, 400)
-  }
+  const roomError = roomProblem(rooms)
+  if (roomError) return c.json({ success: false, message: roomError }, 400)
 
   // Same owner + same PG name + same city already pending or live means this is
   // a re-submission (double click, back button, retry) — don't create a copy.
@@ -374,8 +437,14 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   if (rooms.length > 0) {
     const { data: insertedRooms, error: roomsError } = await supabase
       .from('property_rooms')
-      .insert((rooms as Array<Record<string, unknown>>).map((r) => ({ ...r, property_id: property.id })))
-      .select('id, total_beds')
+      .insert(rooms.map((r) => ({
+        property_id: property.id,
+        type: r.type,
+        price: Number(r.price),
+        total_beds: Number(r.total_beds),
+        description: r.description ?? null,
+      })))
+      .select('id, type')
 
     if (roomsError) {
       // Roll back so the owner can simply retry without creating a duplicate.
@@ -383,13 +452,19 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
       return c.json({ success: false, message: `Could not save rooms: ${roomsError.message}` }, 500)
     }
 
-    const bedInserts = (insertedRooms ?? []).flatMap((room: { id: string; total_beds: number }) =>
-      Array.from({ length: Math.max(room.total_beds ?? 0, 0) }, (_, i) => ({
+    // New beds: `available_beds` vacant (default: all), the rest occupied by
+    // tenants the owner already has.
+    const bedInserts = (insertedRooms ?? []).flatMap((room: { id: string; type: string }) => {
+      const input = rooms.find((r) => r.type === room.type)!
+      const total = Number(input.total_beds)
+      const available = input.available_beds === undefined ? total : Number(input.available_beds)
+      return Array.from({ length: total }, (_, i) => ({
         room_id: room.id,
         property_id: property.id,
         label: `Bed ${i + 1}`,
+        status: i < available ? 'vacant' : 'occupied',
       }))
-    )
+    })
     if (bedInserts.length > 0) await supabase.from('beds').insert(bedInserts)
   }
 
@@ -479,9 +554,69 @@ propertiesRouter.patch('/:id', authMiddleware, async (c) => {
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]
   }
+  // Listing details can be edited but never blanked out.
+  for (const key of ['name', 'address', 'city', 'state'] as const) {
+    if (updates[key] === undefined) continue
+    const value = typeof updates[key] === 'string' ? (updates[key] as string).trim() : ''
+    if (!value) return c.json({ success: false, message: `${key[0].toUpperCase()}${key.slice(1)} can't be empty` }, 400)
+    updates[key] = value
+  }
+  if (updates.gender !== undefined && !['Boys', 'Girls', 'Co-ed'].includes(updates.gender as string)) {
+    return c.json({ success: false, message: 'Gender must be Boys, Girls or Co-ed' }, 400)
+  }
+  if (updates.amenities !== undefined && !Array.isArray(updates.amenities)) {
+    return c.json({ success: false, message: 'Amenities must be a list' }, 400)
+  }
   if (typeof updates.city === 'string') updates.city = normalizeCity(updates.city)
 
-  if (existing.status === 'verified') {
+  // Rooms are checked up front — including against beds booked through PGCON —
+  // so a bad room can't leave the listing half-saved.
+  let incomingRooms: RoomInput[] | null = null
+  type ExistingRoom = { id: string; type: string; beds: BedRow[] }
+  let existingRooms: ExistingRoom[] = []
+  if (body.rooms !== undefined) {
+    try {
+      incomingRooms = (Array.isArray(body.rooms) ? body.rooms : JSON.parse(body.rooms)) as RoomInput[]
+    } catch {
+      return c.json({ success: false, message: 'Room details could not be read' }, 400)
+    }
+    const roomError = roomProblem(incomingRooms)
+    if (roomError) return c.json({ success: false, message: roomError }, 400)
+
+    const { data: rows } = await supabase
+      .from('property_rooms')
+      .select('id, type, beds(id, label, status, current_booking_id)')
+      .eq('property_id', propertyId)
+    existingRooms = (rows ?? []) as ExistingRoom[]
+    const keptIds = new Set(incomingRooms.map((r) => r.id).filter(Boolean))
+
+    for (const room of existingRooms) {
+      const held = room.beds.filter(isHeld).length
+      const incoming = incomingRooms.find((r) => r.id === room.id)
+      if (!incoming) {
+        if (held > 0) {
+          return c.json({ success: false, message: `The ${room.type} room has beds booked through PGCON, so it can't be removed.` }, 409)
+        }
+        continue
+      }
+      const total = Number(incoming.total_beds)
+      if (total < held) {
+        return c.json({ success: false, message: `The ${room.type} room has ${held} bed${held === 1 ? '' : 's'} booked through PGCON — it can't have fewer than ${held} beds.` }, 409)
+      }
+      if (incoming.available_beds !== undefined && Number(incoming.available_beds) > total - held) {
+        return c.json({ success: false, message: `Only ${total - held} of the ${room.type} room's beds can be available — ${held} ${held === 1 ? 'is' : 'are'} booked through PGCON.` }, 409)
+      }
+    }
+    if ([...keptIds].some((id) => !existingRooms.some((r) => r.id === id))) {
+      return c.json({ success: false, message: 'One of these rooms no longer exists. Reload the page and try again.' }, 409)
+    }
+  }
+
+  // Editing what students rely on to trust the listing (name, address…) sends a
+  // live PG back for review. Rooms, prices and bed counts change all the time,
+  // so updating only those keeps the PG live.
+  const listingDetailsChanged = Object.keys(updates).some((k) => k !== 'updated_at')
+  if (existing.status === 'verified' && listingDetailsChanged) {
     updates.status = 'pending'
     updates.is_verified = false
   }
@@ -489,72 +624,42 @@ propertiesRouter.patch('/:id', authMiddleware, async (c) => {
   const { data, error } = await supabase.from('properties').update(updates).eq('id', propertyId).select().single()
   if (error) return c.json({ success: false, message: error.message }, 500)
 
-  if (body.rooms) {
-    const incomingRooms: Array<Record<string, unknown>> = Array.isArray(body.rooms) ? body.rooms : JSON.parse(body.rooms)
-
-    // Real bed rows are now linked to bookings — a blind delete-all-and-reinsert
+  if (incomingRooms) {
+    // Real bed rows are linked to bookings — a blind delete-all-and-reinsert
     // would CASCADE-delete beds out from under active tenancies. Diff instead.
-    const { data: existingRooms } = await supabase
-      .from('property_rooms')
-      .select('id, type, price, description, total_beds, beds(id, label, status)')
-      .eq('property_id', propertyId)
-
-    type ExistingRoom = { id: string; type: string; price: number; description: string | null; total_beds: number; beds: { id: string; label: string; status: string }[] }
-    const existingById = new Map<string, ExistingRoom>(((existingRooms ?? []) as ExistingRoom[]).map((r) => [r.id, r]))
-    const keptIds = new Set(incomingRooms.map((r) => r.id as string | undefined).filter(Boolean) as string[])
-
-    // Rooms omitted from the payload — only safe to drop if every bed on them is vacant.
-    for (const room of existingRooms ?? []) {
-      const r = room as ExistingRoom
-      if (keptIds.has(r.id)) continue
-      const hasClaimedBed = r.beds.some((b) => b.status === 'occupied' || b.status === 'locked')
-      if (hasClaimedBed) {
-        return c.json({ success: false, message: `Cannot remove a room type with an occupied or reserved bed (${r.type}).` }, 409)
-      }
-      await supabase.from('property_rooms').delete().eq('id', r.id)
+    const keptIds = new Set(incomingRooms.map((r) => r.id).filter(Boolean))
+    for (const room of existingRooms) {
+      if (!keptIds.has(room.id)) await supabase.from('property_rooms').delete().eq('id', room.id)
     }
 
     for (const r of incomingRooms) {
-      const roomId = r.id as string | undefined
-      const targetBeds = Math.max(Number(r.total_beds) || 0, 0)
+      const total = Number(r.total_beds)
+      const fields = { type: r.type, price: Number(r.price), description: r.description ?? null }
+      let roomId = r.id
+      // Older clients don't send availability: keep today's free beds, plus
+      // any newly added ones.
+      let available = r.available_beds === undefined ? undefined : Number(r.available_beds)
 
-      if (roomId && existingById.has(roomId)) {
-        const current = existingById.get(roomId)!
-        await supabase.from('property_rooms').update({
-          type: r.type, price: r.price, description: r.description,
-        }).eq('id', roomId)
-
-        const currentBeds = current.beds
-        const diff = targetBeds - currentBeds.length
-        if (diff > 0) {
-          const existingLabels = new Set(currentBeds.map((b) => b.label))
-          let n = 1
-          const newBeds = []
-          while (newBeds.length < diff) {
-            const label = `Bed ${n}`
-            if (!existingLabels.has(label)) newBeds.push({ room_id: roomId, property_id: propertyId, label })
-            n += 1
-          }
-          await supabase.from('beds').insert(newBeds)
-        } else if (diff < 0) {
-          const vacant = currentBeds.filter((b) => b.status === 'vacant')
-          if (vacant.length < -diff) {
-            return c.json({ success: false, message: `Cannot reduce beds below the number currently reserved or occupied (${r.type}).` }, 409)
-          }
-          const toRemove = vacant.slice(0, -diff).map((b) => b.id)
-          await supabase.from('beds').delete().in('id', toRemove)
+      if (roomId) {
+        await supabase.from('property_rooms').update(fields).eq('id', roomId)
+        if (available === undefined) {
+          const beds = existingRooms.find((x) => x.id === roomId)!.beds
+          const vacant = beds.filter((b) => b.status === 'vacant').length
+          const held = beds.filter(isHeld).length
+          available = Math.min(vacant + Math.max(total - beds.length, 0), total - held)
         }
       } else {
         const { data: newRoom, error: newRoomError } = await supabase
           .from('property_rooms')
-          .insert({ type: r.type, price: r.price, description: r.description, total_beds: targetBeds, available_beds: targetBeds, property_id: propertyId })
+          .insert({ ...fields, total_beds: total, property_id: propertyId })
           .select('id')
           .single()
         if (newRoomError || !newRoom) return c.json({ success: false, message: newRoomError?.message ?? 'Failed to add room' }, 500)
-
-        const newBeds = Array.from({ length: targetBeds }, (_, i) => ({ room_id: newRoom.id, property_id: propertyId, label: `Bed ${i + 1}` }))
-        if (newBeds.length > 0) await supabase.from('beds').insert(newBeds)
+        roomId = newRoom.id as string
+        if (available === undefined) available = total
       }
+
+      await syncRoomBeds(supabase, roomId!, propertyId, total, available)
     }
 
     const startingPrice = Math.min(...incomingRooms.map((r) => Number(r.price)))
@@ -563,7 +668,7 @@ propertiesRouter.patch('/:id', authMiddleware, async (c) => {
     // on `beds` derives both from the room/bed changes made above.
   }
 
-  return c.json({ success: true, property: data })
+  return c.json({ success: true, property: data, sent_for_review: updates.status === 'pending' })
 })
 
 // DELETE /api/properties/:id
@@ -578,9 +683,43 @@ propertiesRouter.delete('/:id', authMiddleware, async (c) => {
     return c.json({ success: false, message: 'Not authorized' }, 403)
   }
 
-  const { data: images } = await supabase.from('property_images').select('image_key').eq('property_id', propertyId)
-  if (images?.length) await deleteFromR2(c.env.R2, images.map((img: { image_key: string }) => img.image_key))
+  // Bookings cascade-delete with the PG, so a delete would silently erase
+  // tenants' bookings. Make the owner settle them first.
+  const { count: openBookings } = await supabase
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('property_id', propertyId)
+    .in('status', ['pending', 'confirmed', 'active'])
+  if ((openBookings ?? 0) > 0) {
+    return c.json({
+      success: false,
+      code: 'has_open_bookings',
+      message: `This PG has ${openBookings} open booking${openBookings === 1 ? '' : 's'}. Cancel or complete ${openBookings === 1 ? 'it' : 'them'} in the Bookings tab before deleting.`,
+    }, 409)
+  }
 
-  await supabase.from('properties').delete().eq('id', propertyId)
+  // Rent payments and commissions are financial records and must be kept, so
+  // a PG that has ever taken money can't be removed.
+  const [{ count: payments }, { count: commissions }] = await Promise.all([
+    supabase.from('payments').select('id', { count: 'exact', head: true }).eq('property_id', propertyId),
+    supabase.from('commissions').select('id', { count: 'exact', head: true }).eq('property_id', propertyId),
+  ])
+  if ((payments ?? 0) > 0 || (commissions ?? 0) > 0) {
+    return c.json({
+      success: false,
+      code: 'has_payment_history',
+      message: "This PG has payment history, which we're required to keep, so it can't be deleted. Contact support and we'll take it off PGCON for you.",
+    }, 409)
+  }
+
+  const { data: images } = await supabase.from('property_images').select('image_key').eq('property_id', propertyId)
+
+  // Delete the row first: if that fails, the photos must still be there.
+  const { error: deleteError } = await supabase.from('properties').delete().eq('id', propertyId)
+  if (deleteError) {
+    console.error('[properties/delete]', deleteError.message)
+    return c.json({ success: false, message: "This PG couldn't be deleted. Contact support and we'll remove it for you." }, 500)
+  }
+  if (images?.length) await deleteFromR2(c.env.R2, images.map((img: { image_key: string }) => img.image_key))
   return c.json({ success: true, message: 'Property deleted' })
 })

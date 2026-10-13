@@ -1,10 +1,11 @@
+import { ROOM_TYPES } from "../../lib/listing";
 // Maps live API data onto what the landing design shows. Everything that
 // reaches the page from here is real; illustrative sections use their own
 // clearly-labelled sample data instead.
 
 export const FALLBACK_PHOTO = "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=900&q=80";
 
-const SHARING_ORDER = ["Single", "Double", "Triple"];
+const SHARING_ORDER = ROOM_TYPES;
 
 const hasAmenity = (p, key) => (p.amenities || []).some((a) => String(a).toLowerCase().replace(/[^a-z]/g, "").includes(key));
 
