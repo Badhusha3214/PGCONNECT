@@ -49,9 +49,15 @@ export const metadata = {
     statusBarStyle: "default",
     title: "PGCON",
   },
+  // favicon.ico is picked up from src/app automatically (Next adds its own
+  // cache-busting hash). "?v=pgcon" busts cached copies of the old blue "PG"
+  // PNG icons. Regenerate all of them from public/brand/pgcon-mark-1024.png.
   icons: {
-    icon: [{ url: "/icon-192x192.png", sizes: "192x192", type: "image/png" }],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    icon: [
+      { url: "/icon-192x192.png?v=pgcon", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png?v=pgcon", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png?v=pgcon", sizes: "180x180", type: "image/png" }],
   },
 };
 
