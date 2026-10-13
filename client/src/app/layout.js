@@ -14,8 +14,8 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "PG Connect | Verified PGs and Co-living Spaces",
-    template: "%s | PG Connect",
+    default: "PGCON | Verified PGs and Co-living Spaces",
+    template: "%s | PGCON",
   },
   description: "Find verified PGs and co-living spaces with transparent pricing, room availability, amenities, and manager details.",
   robots: {
@@ -32,14 +32,14 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    siteName: "PG Connect",
-    title: "PG Connect | Verified PGs and Co-living Spaces",
+    siteName: "PGCON",
+    title: "PGCON | Verified PGs and Co-living Spaces",
     description: "Compare verified PG listings, amenities, pricing, and availability in one place.",
     images: [DEFAULT_OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PG Connect | Verified PGs and Co-living Spaces",
+    title: "PGCON | Verified PGs and Co-living Spaces",
     description: "Compare verified PG listings, amenities, pricing, and availability in one place.",
     images: [DEFAULT_OG_IMAGE.url],
   },
@@ -47,7 +47,7 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "PG Connect",
+    title: "PGCON",
   },
   icons: {
     icon: [{ url: "/icon-192x192.png", sizes: "192x192", type: "image/png" }],

@@ -35,7 +35,7 @@ export const rupees = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 export const bedsLeftLabel = (n) => (n <= 0 ? "Full right now" : `${n} bed${n === 1 ? "" : "s"} left`);
 
 export const reviewerName = (r) => {
-  const first = r?.tenant?.first_name || "PG Connect resident";
+  const first = r?.tenant?.first_name || "PGCON resident";
   const lastInitial = r?.tenant?.last_name?.[0];
   return lastInitial ? `${first} ${lastInitial}.` : first;
 };

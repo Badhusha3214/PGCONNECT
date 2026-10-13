@@ -1,4 +1,6 @@
-const CACHE_NAME = "pgconnect-v1";
+// Bumped from v1: v1 cached every same-origin GET, including the /sb/ Supabase
+// proxy (auth/user data). Activating v2 deletes that cache.
+const CACHE_NAME = "pgcon-v3";
 const OFFLINE_URL = "/offline";
 const PRECACHE_URLS = [OFFLINE_URL, "/icon-192x192.png", "/icon-512x512.png"];
 
@@ -29,6 +31,13 @@ self.addEventListener("fetch", (event) => {
     );
     return;
   }
+
+  // Only cache immutable static assets. Never cache the /sb/ Supabase proxy
+  // (session/user data), RSC payloads or anything else that changes per user.
+  const isStatic =
+    url.pathname.startsWith("/_next/static/") ||
+    /\.(png|jpe?g|webp|svg|ico|woff2?)$/.test(url.pathname);
+  if (!isStatic) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {

@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: "PG Connect | Verified PGs and Co-living Spaces",
-    short_name: "PG Connect",
+    name: "PGCON | Verified PGs and Co-living Spaces",
+    short_name: "PGCON",
     description: "Find verified PGs and co-living spaces with transparent pricing, room availability, amenities, and manager details.",
     start_url: "/",
     display: "standalone",

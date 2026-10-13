@@ -19,7 +19,7 @@ export const sendEmail = async (
       method: 'POST',
       headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: env.EMAIL_FROM || 'PG Connect <onboarding@resend.dev>',
+        from: env.EMAIL_FROM || 'PGCON <onboarding@resend.dev>',
         to: [msg.to],
         subject: msg.subject,
         html: msg.html,

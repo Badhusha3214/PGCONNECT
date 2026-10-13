@@ -64,19 +64,7 @@ const haversineKm = (a, b) => {
   return 2 * R * Math.asin(Math.sqrt(h));
 };
 
-const formatShortDate = (isoDate) => {
-  if (!isoDate) return "";
-  const d = new Date(`${isoDate}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
-};
-
 const toISODate = (date) => date.toISOString().slice(0, 10);
-const addDays = (isoDate, days) => {
-  const d = new Date(`${isoDate}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return toISODate(d);
-};
 
 const mapProperty = (property) => {
   const rooms = Array.isArray(property?.property_rooms) ? property.property_rooms : [];
@@ -152,25 +140,16 @@ function SearchResultsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Booking-style search capsule
-  const [checkOut, setCheckOut] = useState(addDays(today, 1));
-  const [datesOpen, setDatesOpen] = useState(false);
-  const [rooms, setRooms] = useState(1);
-  const [guests, setGuests] = useState(1);
-  const [guestsOpen, setGuestsOpen] = useState(false);
+  // PG stays are monthly, so the search capsule asks for a move-in date and
+  // how many beds are needed (e.g. friends moving in together) — not a
+  // hotel-style check-out date or rooms/guests.
+  const [bedsNeeded, setBedsNeeded] = useState(1);
   const [userCoords, setUserCoords] = useState(null);
   const [nearMeActive, setNearMeActive] = useState(false);
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState("");
-  const [language, setLanguage] = useState("EN");
-  const [languageOpen, setLanguageOpen] = useState(false);
 
   const filtersDrawerRef = useDismissableOverlay(filtersOpen, () => setFiltersOpen(false));
-  const datesPopoverRef = useDismissableOverlay(datesOpen, () => setDatesOpen(false));
-  const guestsPopoverRef = useDismissableOverlay(guestsOpen, () => setGuestsOpen(false));
-  const languagePopoverRef = useDismissableOverlay(languageOpen, () => setLanguageOpen(false));
-
-  const LANGUAGES = ["EN", "ML", "HI"];
 
   const handleNearMe = () => {
     if (!navigator.geolocation) {
@@ -249,7 +228,7 @@ function SearchResultsContent() {
       // wording/case, so compare their normalized keys.
       if (amenities.length > 0 && !amenities.every((a) => p.amenityIcons.includes(getAmenityIconKey(a)))) return false;
       if (moveIn && p.availableBeds <= 0) return false;
-      if (guests > 1 && p.availableBeds < guests) return false;
+      if (bedsNeeded > 1 && p.availableBeds < bedsNeeded) return false;
       const searchValue = search.toLowerCase();
       if (searchValue
         && !p.name.toLowerCase().includes(searchValue)
@@ -450,75 +429,27 @@ function SearchResultsContent() {
                 </button>
               </div>
 
-              {/* Dates */}
-              <div className="relative shrink-0">
-                <button onClick={() => { setDatesOpen((v) => !v); setGuestsOpen(false); setLanguageOpen(false); }}
-                  className="h-full flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap cursor-pointer hover:border-blue-300 transition-colors">
-                  <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                  {formatShortDate(moveIn)} – {formatShortDate(checkOut)}
-                </button>
-                {datesOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setDatesOpen(false)} />
-                    <div ref={datesPopoverRef} className="absolute z-50 top-full mt-2 left-0 bg-white dark:bg-slate-800 border rounded-xl shadow-xl p-4 w-64 space-y-3" style={{ borderColor: "var(--pg-border-soft)" }}>
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Move-in</label>
-                        <input type="date" value={moveIn} min={today}
-                          onChange={(e) => { setMoveIn(e.target.value); if (checkOut <= e.target.value) setCheckOut(addDays(e.target.value, 1)); }}
-                          className="w-full border rounded-lg px-2 py-1.5 text-sm mt-1 outline-none" style={{ borderColor: "var(--pg-border)", color: "var(--pg-text)" }} />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">Move-out (est.)</label>
-                        <input type="date" value={checkOut} min={addDays(moveIn, 1)}
-                          onChange={(e) => setCheckOut(e.target.value)}
-                          className="w-full border rounded-lg px-2 py-1.5 text-sm mt-1 outline-none" style={{ borderColor: "var(--pg-border)", color: "var(--pg-text)" }} />
-                      </div>
-                      <button onClick={() => setDatesOpen(false)} className="w-full text-white text-xs font-bold py-2 rounded-lg cursor-pointer" style={{ background: "var(--pg-primary)" }}>
-                        Done
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
+              {/* Move-in date */}
+              <label className="shrink-0 h-full flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-blue-300 transition-colors cursor-pointer">
+                <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span className="text-xs text-slate-500">Move-in</span>
+                <input type="date" value={moveIn} min={today} aria-label="Move-in date"
+                  onChange={(e) => setMoveIn(e.target.value || today)}
+                  className="bg-transparent outline-none text-sm font-semibold cursor-pointer" style={{ color: "var(--pg-text)" }} />
+              </label>
 
-              {/* Rooms & Guests */}
-              <div className="relative shrink-0">
-                <button onClick={() => { setGuestsOpen((v) => !v); setDatesOpen(false); setLanguageOpen(false); }}
-                  className="h-full flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap cursor-pointer hover:border-blue-300 transition-colors">
-                  <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                  </svg>
-                  {rooms} Room{rooms > 1 ? "s" : ""}, {guests} Guest{guests > 1 ? "s" : ""}
-                </button>
-                {guestsOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setGuestsOpen(false)} />
-                    <div ref={guestsPopoverRef} className="absolute z-50 top-full mt-2 right-0 bg-white dark:bg-slate-800 border rounded-xl shadow-xl p-4 w-56 space-y-4" style={{ borderColor: "var(--pg-border-soft)" }}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Rooms</span>
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => setRooms((r) => Math.max(1, r - 1))} aria-label="Decrease rooms" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>−</button>
-                          <span className="text-sm font-bold w-4 text-center">{rooms}</span>
-                          <button onClick={() => setRooms((r) => Math.min(5, r + 1))} aria-label="Increase rooms" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>+</button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Guests</span>
-                        <div className="flex items-center gap-3">
-                          <button onClick={() => setGuests((g) => Math.max(1, g - 1))} aria-label="Decrease guests" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>−</button>
-                          <span className="text-sm font-bold w-4 text-center">{guests}</span>
-                          <button onClick={() => setGuests((g) => Math.min(10, g + 1))} aria-label="Increase guests" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>+</button>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                )}
+              {/* Beds needed */}
+              <div className="shrink-0 h-full flex items-center gap-3 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">Beds</span>
+                <button onClick={() => setBedsNeeded((b) => Math.max(1, b - 1))} aria-label="Fewer beds" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>−</button>
+                <span className="text-sm font-bold w-4 text-center" aria-live="polite">{bedsNeeded}</span>
+                <button onClick={() => setBedsNeeded((b) => Math.min(10, b + 1))} aria-label="More beds" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>+</button>
               </div>
 
               {/* Search */}
-              <button onClick={() => { setDatesOpen(false); setGuestsOpen(false); setLanguageOpen(false); setPage(1); }}
+              <button onClick={() => setPage(1)}
                 className="btn-shine shrink-0 flex items-center gap-2 text-white font-bold text-[15px] px-6 min-h-[48px] rounded-full cursor-pointer" style={{ background: "var(--pg-terracotta)", boxShadow: "0 12px 28px -10px rgba(180,70,31,.7)" }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -538,30 +469,6 @@ function SearchResultsContent() {
                 )}
               </button>
 
-              {/* Language */}
-              <div className="relative shrink-0">
-                <button onClick={() => { setLanguageOpen((v) => !v); setDatesOpen(false); setGuestsOpen(false); }}
-                  className="h-full flex items-center gap-1 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 cursor-pointer hover:border-blue-300 transition-colors">
-                  {language}
-                  <svg className="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </button>
-                {languageOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setLanguageOpen(false)} />
-                    <div ref={languagePopoverRef} className="absolute z-50 top-full mt-2 right-0 bg-white dark:bg-slate-800 border rounded-xl shadow-xl py-1 w-24" style={{ borderColor: "var(--pg-border-soft)" }}>
-                      {LANGUAGES.map((l) => (
-                        <button key={l} onClick={() => { setLanguage(l); setLanguageOpen(false); }}
-                          className="w-full text-left px-3 py-1.5 text-sm cursor-pointer hover:bg-blue-50"
-                          style={l === language ? { color: "var(--pg-primary)", fontWeight: 700 } : { color: "var(--pg-text)" }}>
-                          {l}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
             </div>
             {geoError && <p className="text-xs text-red-500 mt-2">{geoError}</p>}
           </div>

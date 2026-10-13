@@ -63,7 +63,7 @@ export default function Footer() {
         </div>
         <div className="kasavu opacity-60" aria-hidden="true" />
         <div className="flex flex-wrap justify-between gap-3 text-[13px] text-[var(--pg-text-tertiary)]">
-          <span>© {year} PG Connect · Kerala, India</span>
+          <span>© {year} PGCON · Kerala, India</span>
           <span className="flex flex-wrap gap-5">
             {LEGAL.map((l) => (
               <Link key={l.label} href={l.href} className="text-[var(--pg-text-tertiary)] hover:text-[var(--pg-terracotta)]">{l.label}</Link>

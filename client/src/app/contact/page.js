@@ -6,7 +6,7 @@ import PageHero from "../components/PageHero";
 
 export const metadata = pageMetadata({
   title: "Contact Us",
-  description: "Get in touch with the PG Connect team for help with bookings, listings, payments or partnerships.",
+  description: "Get in touch with the PGCON team for help with bookings, listings, payments or partnerships.",
   path: "/contact",
 });
 

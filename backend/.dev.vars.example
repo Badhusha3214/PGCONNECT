@@ -28,4 +28,4 @@ CLIENT_URL=http://localhost:3000
 # Owner notifications for new inquiries. Leave blank to skip sending in dev.
 # Key: resend.com → API Keys. EMAIL_FROM must use a domain verified in Resend.
 RESEND_API_KEY=
-EMAIL_FROM=PG Connect <noreply@your-domain.com>
+EMAIL_FROM=PGCON <noreply@your-domain.com>

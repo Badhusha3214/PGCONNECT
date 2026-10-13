@@ -56,7 +56,7 @@ export default function CheckEmail({ email, role, compact = false }) {
 
       <ol className="m-0 pl-5 flex flex-col gap-1.5 text-sm text-[var(--pg-text-secondary)]" style={{ lineHeight: 1.55 }}>
         <li>Open your inbox for <strong className="text-[var(--pg-ink)]">{email}</strong>.</li>
-        <li>Find the email from PG Connect and tap the confirm button.</li>
+        <li>Find the email from PGCON and tap the confirm button.</li>
         <li>{afterConfirm}</li>
       </ol>
 
@@ -65,7 +65,7 @@ export default function CheckEmail({ email, role, compact = false }) {
         <ul className="m-0 pl-5 flex flex-col gap-1.5">
           <li>It can take a minute or two to arrive.</li>
           <li>Check <strong>Spam / Junk</strong>, and in Gmail the <strong>Promotions</strong> and <strong>Updates</strong> tabs. If it&apos;s there, mark it &ldquo;Not spam&rdquo;.</li>
-          <li>Search your mailbox for <strong>&ldquo;Confirm your email&rdquo;</strong> or <strong>&ldquo;PG Connect&rdquo;</strong>.</li>
+          <li>Search your mailbox for <strong>&ldquo;Confirm your email&rdquo;</strong> or <strong>&ldquo;PGCON&rdquo;</strong>.</li>
           <li>Typo in the address? <a href="/register" className="font-bold">Register again</a> with the correct email.</li>
           <li>Link says expired or already used? Request a new one below — only the newest link works.</li>
         </ul>

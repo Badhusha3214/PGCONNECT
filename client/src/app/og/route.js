@@ -19,7 +19,7 @@ export async function GET() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 36, fontWeight: 700 }}>
           <div style={{ width: 18, height: 26, borderRadius: 5, background: "#FFC447", boxShadow: "0 0 18px #FFC447" }} />
-          PG Connect
+          PGCON
         </div>
         <div style={{ fontSize: 76, fontWeight: 800, lineHeight: 1.1, marginTop: 24 }}>
           Verified PGs &amp; Hostels in Kerala

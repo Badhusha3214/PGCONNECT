@@ -3,7 +3,7 @@ import LegalPage from "../components/LegalPage";
 
 export const metadata = pageMetadata({
   title: "Privacy Policy",
-  description: "How PG Connect collects, uses and protects your personal information.",
+  description: "How PGCON collects, uses and protects your personal information.",
   path: "/privacy",
 });
 
@@ -12,7 +12,7 @@ const SECTIONS = [
     heading: "1. Information We Collect",
     body: [
       "When you create an account, we collect your name, email address, phone number, and role (student or property owner). Students may also provide their university and move-in preferences; owners provide property details, manager contact information, and photos.",
-      "When you make or receive a payment through PG Connect, our payment processor (Razorpay) collects and processes the necessary billing details. We do not store your full card or bank details on our servers.",
+      "When you make or receive a payment through PGCON, our payment processor (Razorpay) collects and processes the necessary billing details. We do not store your full card or bank details on our servers.",
     ],
   },
   {

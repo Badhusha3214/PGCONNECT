@@ -392,7 +392,7 @@ function RegisterForm() {
                           )}
                         </div>
                         <span className="text-xs text-slate-500 leading-relaxed">
-                          I agree to PG Connect's{" "}
+                          I agree to PGCON's{" "}
                           <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: "var(--pg-primary)" }}>Terms of Service</a> and{" "}
                           <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: "var(--pg-primary)" }}>Privacy Policy</a>.
                           I confirm I am 18 years or older.
@@ -477,7 +477,7 @@ function RegisterForm() {
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5">City</label>
                             <input
                               type="text"
-                              placeholder="e.g. Bangalore, Delhi"
+                              placeholder="e.g. Kochi, Kottayam"
                               value={form.propertyCity}
                               onChange={(e) => set("propertyCity", e.target.value)}
                               className="w-full border rounded-2xl px-4 py-3 text-sm placeholder-slate-400 outline-none transition-all" style={{ background: "var(--pg-bg)", borderColor: "var(--pg-border)", color: "var(--pg-text)" }}
@@ -513,7 +513,7 @@ function RegisterForm() {
                           )}
                         </div>
                         <span className="text-xs text-slate-500 leading-relaxed">
-                          I agree to PG Connect's{" "}
+                          I agree to PGCON's{" "}
                           <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: "var(--pg-primary)" }}>Terms of Service</a> and{" "}
                           <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: "var(--pg-primary)" }}>Privacy Policy</a>.
                           I confirm I am 18 years or older.

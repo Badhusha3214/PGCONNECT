@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getMyBookings, createPaymentOrder, verifyPayment, getPaymentHistory } from "../api";
+import Navbar from "../components/Navbar";
 
 const statusStyles = {
   paid: "bg-green-50 text-green-700 border border-green-200",
@@ -27,18 +29,27 @@ export default function PaymentsPage() {
   const [activeTab, setActiveTab] = useState("pay");
 
   const [bookings, setBookings] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [payingId, setPayingId] = useState(null);
+  // { type: "success" | "error", text } shown above the bookings instead of alert().
+  const [notice, setNotice] = useState(null);
 
   const loadBookings = useCallback(async () => {
     try {
       setBookingsLoading(true);
       const res = await getMyBookings();
-      if (res.success) setBookings((res.bookings ?? []).filter((b) => ["confirmed", "active"].includes(b.status)));
+      if (res.success) {
+        const all = res.bookings ?? [];
+        setBookings(all.filter((b) => ["confirmed", "active"].includes(b.status)));
+        // Requests the owner hasn't confirmed yet (or turned down) — shown so
+        // students aren't left wondering where their booking went.
+        setRequests(all.filter((b) => ["pending", "cancelled"].includes(b.status)));
+      }
     } catch (e) { console.error(e); }
     finally { setBookingsLoading(false); }
   }, []);
@@ -81,7 +92,7 @@ export default function PaymentsPage() {
         key: orderRes.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: Math.round(orderRes.amount * 100),
         currency: "INR",
-        name: "PG Connect",
+        name: "PGCON",
         description: `Monthly Rent — ${booking.properties?.name ?? ""}`,
         order_id: orderRes.order_id,
         handler: async (response) => {
@@ -93,12 +104,17 @@ export default function PaymentsPage() {
               payment_id: orderRes.payment_id,
             });
             if (verifyRes.success) {
-              alert("Payment successful! Your rent has been paid.");
+              setNotice({ type: "success", text: `Payment received — your rent for ${booking.properties?.name ?? "your PG"} is paid. A receipt is in Payment History.` });
               await loadBookings();
-              setPayingId(null);
             }
           } catch (e) {
-            alert("Payment verification failed. Please contact support.");
+            // Razorpay already took the money at this point, so don't tell them it failed.
+            setNotice({
+              type: "error",
+              text: `Your payment went through, but we couldn't confirm it yet (${e.message}). It usually updates within a few minutes — contact support with Razorpay ID ${response.razorpay_payment_id} if it doesn't.`,
+            });
+          } finally {
+            setPayingId(null);
           }
         },
         prefill: { name: "", email: "", contact: "" },
@@ -107,9 +123,12 @@ export default function PaymentsPage() {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (resp) => {
+        setNotice({ type: "error", text: `Payment failed: ${resp?.error?.description || "the bank declined it"}. No money was taken — please try again.` });
+      });
       rzp.open();
     } catch (e) {
-      alert(e.message);
+      setNotice({ type: "error", text: e.message || "Couldn't start the payment. Please try again." });
       setPayingId(null);
     }
   };
@@ -121,16 +140,56 @@ export default function PaymentsPage() {
     <>
 
       <div className="min-h-screen bg-[var(--pg-bg)]">
-        {/* Navbar */}
-        <header className="sticky top-0 z-50 bg-white dark:bg-slate-800 border-b border-[var(--pg-border)] h-14 flex items-center px-4 sm:px-6 gap-4">
-          <button onClick={() => router.push("/")} className="text-[var(--pg-primary)] font-bold text-base cursor-pointer">PG Connect</button>
-          <div className="flex-1" />
-          <button onClick={() => router.back()} className="text-sm text-[var(--pg-text-tertiary)] hover:text-[var(--pg-text)] cursor-pointer">← Back</button>
-        </header>
+        <Navbar />
 
         <div id="main-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--pg-text)] mb-2">Payments</h1>
-          <p className="text-sm text-[var(--pg-text-tertiary)] mb-8">Pay your monthly rent and view payment history.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--pg-text)] mb-2">My bookings &amp; payments</h1>
+          <p className="text-sm text-[var(--pg-text-tertiary)] mb-8">
+            Track your booking requests, pay monthly rent and see your payment history.{" "}
+            <Link href="/referrerDashboard" className="font-semibold" style={{ color: "var(--pg-terracotta)" }}>Referral earnings →</Link>
+          </p>
+
+          {notice && (
+            <div role={notice.type === "error" ? "alert" : "status"}
+              className={`mb-6 flex items-start justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-medium ${notice.type === "error" ? "bg-red-50 border-red-200 text-red-700" : "bg-green-50 border-green-200 text-green-800"}`}>
+              <span>{notice.text}</span>
+              <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss" className="shrink-0 font-bold cursor-pointer">×</button>
+            </div>
+          )}
+
+          {/* Booking requests waiting on (or declined by) the owner */}
+          {activeTab === "pay" && requests.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-3">Booking requests</h2>
+              <div className="space-y-3">
+                {requests.map((r) => (
+                  <div key={r.id} className="bg-white rounded-2xl border border-[var(--pg-border)] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-4 min-w-0">
+                      {r.properties?.property_images?.[0]?.image_url && (
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-[var(--pg-bg)] shrink-0">
+                          <img src={r.properties.property_images[0].image_url} alt="" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <Link href={`/property/${r.property_id}`} className="font-bold text-[var(--pg-text)] no-underline hover:underline">{r.properties?.name ?? "Property"}</Link>
+                        <p className="text-sm text-[var(--pg-text-tertiary)]">
+                          {r.properties?.city} · {r.room_type} room · move-in {formatDate(r.move_in_date)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="sm:text-right shrink-0">
+                      <span className={`inline-block text-[11px] font-bold px-2.5 py-1 rounded-full border ${r.status === "pending" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-red-50 text-red-600 border-red-200"}`}>
+                        {r.status === "pending" ? "Waiting for the owner to confirm" : "Cancelled"}
+                      </span>
+                      <p className="text-xs text-[var(--pg-text-tertiary)] mt-1">
+                        {r.status === "pending" ? "You can pay rent here once it's confirmed." : "Try another PG or send the owner an inquiry."}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-1 bg-[var(--pg-bg)] rounded-xl p-1 mb-8 w-fit">

@@ -13,10 +13,13 @@ export const propertiesRouter = new Hono<Env>()
 // Public, unauthenticated, identical response for everyone hitting the same
 // URL — safe to edge-cache. Never apply this to an authenticated route: the
 // cache key is just the URL, so it would leak one user's response to another.
-const publicCache = cache({ cacheName: 'pgconnect-properties', cacheControl: 'public, max-age=30' })
+const publicCache = cache({ cacheName: 'pgcon-properties', cacheControl: 'public, max-age=30' })
 
 const MAX_PAGE_SIZE = 100
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Must match the property_rooms.type CHECK constraint in supabase-schema.sql.
+const ROOM_TYPES = ['Single', 'Double', 'Triple']
 
 const MAX_PHOTOS = 10
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024
@@ -144,7 +147,7 @@ propertiesRouter.get('/', publicCache, async (c) => {
 
 // GET /api/properties/stats — real public numbers for the homepage.
 // Two narrow columns, edge-cached for 30 minutes, so this stays cheap.
-const statsCache = cache({ cacheName: 'pgconnect-stats', cacheControl: 'public, max-age=1800' })
+const statsCache = cache({ cacheName: 'pgcon-stats', cacheControl: 'public, max-age=1800' })
 propertiesRouter.get('/stats', statsCache, async (c) => {
   const supabase = getSupabase(c.env)
   const { data, error } = await supabase
@@ -189,16 +192,20 @@ propertiesRouter.get('/owner/mine', authMiddleware, requireRole('owner', 'admin'
 // GET /api/properties/:id
 // The view is recorded before the cache layer so cached hits still count, via
 // an atomic SQL increment (a read-then-write here would lose concurrent views).
+// ?preview=1 is the owner's "see it as students do" view: always fresh (no
+// edge cache) and not counted as a view.
 propertiesRouter.get('/:id', async (c, next) => {
   const id = c.req.param('id')
   if (!UUID_RE.test(id)) return c.json({ success: false, message: 'Property not found' }, 404)
-  c.executionCtx.waitUntil(
-    Promise.resolve(getSupabase(c.env).rpc('increment_property_views', { prop_id: id })).then(({ error }) => {
-      if (error) console.error('[properties/:id] increment_property_views failed:', error.message)
-    })
-  )
+  if (c.req.query('preview') !== '1') {
+    c.executionCtx.waitUntil(
+      Promise.resolve(getSupabase(c.env).rpc('increment_property_views', { prop_id: id })).then(({ error }) => {
+        if (error) console.error('[properties/:id] increment_property_views failed:', error.message)
+      })
+    )
+  }
   await next()
-}, publicCache, async (c) => {
+}, (c, next) => (c.req.query('preview') === '1' ? next() : publicCache(c, next)), async (c) => {
   const supabase = getSupabase(c.env)
   const { data: property, error } = await supabase
     .from('properties')
@@ -286,7 +293,49 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
     ? body.amenities.split(',').map((a: string) => a.trim()).filter(Boolean)
     : (body.amenities as string[] | undefined) ?? []
 
-  const rooms = typeof body.rooms === 'string' ? JSON.parse(body.rooms as string) : (body.rooms ?? [])
+  let rooms: Array<{ type: string; price: number; total_beds: number; description?: string }>
+  try {
+    rooms = typeof body.rooms === 'string' ? JSON.parse(body.rooms as string) : (body.rooms as typeof rooms) ?? []
+  } catch {
+    return c.json({ success: false, message: 'Room details could not be read' }, 400)
+  }
+  // Check rooms before creating anything, so a bad room never leaves behind a
+  // half-made property (which owners then re-submit, creating duplicates).
+  if (!Array.isArray(rooms) || rooms.length === 0) {
+    return c.json({ success: false, message: 'Add at least one room type' }, 400)
+  }
+  const badRoom = rooms.find((r) =>
+    !ROOM_TYPES.includes(r.type) || !(Number(r.price) > 0) || !(Number.isInteger(Number(r.total_beds)) && Number(r.total_beds) >= 1)
+  )
+  if (badRoom) {
+    return c.json({
+      success: false,
+      message: `Each room needs a type (${ROOM_TYPES.join(', ')}), a price and at least 1 bed`,
+    }, 400)
+  }
+
+  // Same owner + same PG name + same city already pending or live means this is
+  // a re-submission (double click, back button, retry) — don't create a copy.
+  const escapedName = String(body.name).trim().replace(/[\\%_]/g, (ch) => `\\${ch}`)
+  const { data: existing } = await supabase
+    .from('properties')
+    .select('id, status')
+    .eq('owner_id', user.id)
+    .ilike('name', escapedName)
+    .eq('city', normalizeCity(body.city as string))
+    .in('status', ['pending', 'verified'])
+    .limit(1)
+    .maybeSingle()
+  if (existing) {
+    return c.json({
+      success: false,
+      code: 'duplicate_listing',
+      property_id: existing.id,
+      message: existing.status === 'pending'
+        ? `You already submitted "${String(body.name).trim()}" — it's waiting for admin approval. You can track it in your Owner Dashboard.`
+        : `"${String(body.name).trim()}" is already listed. Edit it from your Owner Dashboard instead of adding it again.`,
+    }, 409)
+  }
 
   // Calculate starting price from rooms
   const startingPrice = rooms.length > 0
@@ -328,7 +377,11 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
       .insert((rooms as Array<Record<string, unknown>>).map((r) => ({ ...r, property_id: property.id })))
       .select('id, total_beds')
 
-    if (roomsError) return c.json({ success: false, message: roomsError.message }, 500)
+    if (roomsError) {
+      // Roll back so the owner can simply retry without creating a duplicate.
+      await supabase.from('properties').delete().eq('id', property.id)
+      return c.json({ success: false, message: `Could not save rooms: ${roomsError.message}` }, 500)
+    }
 
     const bedInserts = (insertedRooms ?? []).flatMap((room: { id: string; total_beds: number }) =>
       Array.from({ length: Math.max(room.total_beds ?? 0, 0) }, (_, i) => ({

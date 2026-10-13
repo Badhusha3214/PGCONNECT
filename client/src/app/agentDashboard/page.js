@@ -3,11 +3,13 @@ import { LogoMark } from "../components/Logo";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useDismissableOverlay } from "../../lib/useDismissableOverlay";
+import Toast, { useToast } from "../components/Toast";
 import {
   getAgentCode,
   getAgentStats,
   getAgentCommissions,
   requestAgentPayout,
+  getCurrentUser,
 } from "../api";
 
 const statusStyles = {
@@ -56,6 +58,17 @@ export default function AgentDashboard() {
 
   const [payoutLoading, setPayoutLoading] = useState(false);
 
+  const [toast, showToast] = useToast();
+  const [initials, setInitials] = useState("");
+  useEffect(() => {
+    getCurrentUser()
+      .then((res) => {
+        const u = res?.user;
+        setInitials(`${u?.first_name?.[0] ?? ""}${u?.last_name?.[0] ?? ""}`.toUpperCase());
+      })
+      .catch(() => {});
+  }, []);
+
   const loadStats = useCallback(async () => {
     try {
       setStatsLoading(true);
@@ -102,9 +115,9 @@ export default function AgentDashboard() {
     try {
       setPayoutLoading(true);
       const res = await requestAgentPayout();
-      alert(res.message);
+      showToast(res.message || "Payout requested. It's usually processed within 2–3 business days.");
       await loadStats();
-    } catch (e) { alert(e.message); }
+    } catch (e) { showToast(e.message || "Couldn't request a payout. Please try again.", "error"); }
     finally { setPayoutLoading(false); }
   };
 
@@ -132,9 +145,9 @@ export default function AgentDashboard() {
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <button onClick={() => router.push("/")} className="lg:block hidden cursor-pointer"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></button>
+          <button onClick={() => router.push("/")} className="lg:block hidden cursor-pointer"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></button>
           <div className="lg:hidden">
-            <p className="font-serif-display text-blue-600 text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PG Connect</span></span></p>
+            <p className="font-serif-display text-blue-600 text-base font-bold"><span className="inline-flex items-center gap-2"><LogoMark size={26} /><span className="display font-extrabold tracking-[-0.02em] text-[var(--pg-ink)]">PGCON</span></span></p>
           </div>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
@@ -142,7 +155,7 @@ export default function AgentDashboard() {
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-tight">Agent Portal</p>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">{isVerified ? "Verified Agent" : "Pending Approval"}</p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold shrink-0">AG</div>
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold shrink-0">{initials || "•"}</div>
           </div>
         </header>
 
@@ -187,13 +200,14 @@ export default function AgentDashboard() {
 
           {/* MAIN */}
           <main id="main-content" className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 min-w-0">
+            <Toast toast={toast} onClose={() => showToast(null)} />
 
             {!statsLoading && !isVerified && (
               <div className="mb-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
                 <span className="text-xl leading-none">⏳</span>
                 <div>
                   <p className="text-sm font-bold text-amber-800">Your agent account is pending admin approval</p>
-                  <p className="text-xs text-amber-700 mt-0.5">Your code is visible below, but it won't connect any properties until PG Connect approves your account.</p>
+                  <p className="text-xs text-amber-700 mt-0.5">Your code is visible below, but it won't connect any properties until PGCON approves your account.</p>
                 </div>
               </div>
             )}
@@ -228,7 +242,7 @@ export default function AgentDashboard() {
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">How commission lands in your balance.</p>
                   <div className="p-4 rounded-xl border-2 border-slate-200 dark:border-slate-700">
                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100">One-Time Bounty</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">A flat payout the moment a PG connected to your code gets verified by PG Connect.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">A flat payout the moment a PG connected to your code gets verified by PGCON.</p>
                   </div>
                 </div>
 
@@ -399,7 +413,7 @@ export default function AgentDashboard() {
                     {[
                       { n: 1, title: "Share your code", desc: "Send your unique agent code or link to a PG owner you've onboarded." },
                       { n: 2, title: "Owner lists their PG", desc: "The owner enters your code while listing their property. It's now connected to you." },
-                      { n: 3, title: "Admin verifies the PG", desc: "PG Connect reviews and verifies the listing — you earn a one-time bounty the moment it goes live." },                    ].map((step) => (
+                      { n: 3, title: "Admin verifies the PG", desc: "PGCON reviews and verifies the listing — you earn a one-time bounty the moment it goes live." },                    ].map((step) => (
                       <div key={step.n} className="flex items-start gap-4">
                         <div className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{step.n}</div>
                         <div>

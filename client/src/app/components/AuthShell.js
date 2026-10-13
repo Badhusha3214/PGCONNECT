@@ -22,7 +22,7 @@ export default function AuthShell({ eyebrow, title, accent, intro, children, foo
             <span style={{ width: 9, height: 13, borderRadius: 3, background: "rgba(255,255,255,.28)" }} />
             <span style={{ width: 9, height: 13, borderRadius: 3, background: "#FFC447", boxShadow: "0 0 10px #FFC447" }} />
           </span>
-          <span className="display font-extrabold text-[21px] tracking-[-0.02em]">PG Connect</span>
+          <span className="display font-extrabold text-[21px] tracking-[-0.02em]">PGCON</span>
         </Link>
 
         <div className="relative flex flex-col gap-8 max-w-[520px]">
@@ -68,7 +68,7 @@ export default function AuthShell({ eyebrow, title, accent, intro, children, foo
           </div>
         </div>
         <div className="px-5 sm:px-8 py-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-[var(--pg-text-tertiary)]">
-          <span>© {new Date().getFullYear()} PG Connect</span>
+          <span>© {new Date().getFullYear()} PGCON</span>
           <Link href="/privacy" className="text-[var(--pg-text-tertiary)]">Privacy</Link>
           <Link href="/terms" className="text-[var(--pg-text-tertiary)]">Terms</Link>
           <Link href="/cookie-policy" className="text-[var(--pg-text-tertiary)]">Cookies</Link>

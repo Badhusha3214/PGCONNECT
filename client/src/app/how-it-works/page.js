@@ -87,14 +87,14 @@ export default function HowItWorksPage() {
               <span className="eyebrow">Pricing & commission</span>
               <H2>Simple, published pricing.</H2>
               <p className="m-0 text-lg leading-relaxed text-[var(--pg-text-secondary)]">
-                Listing costs ₹1,000 per property per year — the first 250 PGs to go live get their first year free. On rent collected through PG Connect, a 5% platform fee applies:
+                Listing costs ₹1,000 per property per year — the first 250 PGs to go live get their first year free. On rent collected through PGCON, a 5% platform fee applies:
               </p>
             </div>
             <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(240px, 100%), 1fr))" }}>
               {[
                 ["95%", "Paid to you as the owner", "var(--pg-forest)"],
                 ["2%", "To the student who referred your listing", "var(--pg-terracotta)"],
-                ["3%", "Platform fee to PG Connect", "var(--pg-ink)"],
+                ["3%", "Platform fee to PGCON", "var(--pg-ink)"],
               ].map(([v, l, c]) => (
                 <div key={v} className="rounded-[30px] p-7 flex flex-col gap-2" style={{ background: "var(--pg-bg)" }}>
                   <span className="display font-extrabold" style={{ fontSize: 56, lineHeight: 1, letterSpacing: "-0.05em", color: c }}>{v}</span>
@@ -111,12 +111,12 @@ export default function HowItWorksPage() {
             <div className="flex flex-col gap-5">
               <span className="mono text-[13px] tracking-[.14em]" style={{ color: "#FFE1CF" }}>REFERRAL PROGRAM</span>
               <H2>Refer a PG owner, earn 2% every month.</H2>
-              <p className="m-0 text-lg leading-relaxed" style={{ color: "#FFEDE4" }}>Every student account comes with an 8-character referral code. When an owner lists with your code and collects rent through PG Connect, you earn automatically.</p>
+              <p className="m-0 text-lg leading-relaxed" style={{ color: "#FFEDE4" }}>Every student account comes with an 8-character referral code. When an owner lists with your code and collects rent through PGCON, you earn automatically.</p>
               <Link href="/register?role=student" className="self-start inline-flex items-center min-h-[52px] px-[26px] rounded-full font-bold text-base no-underline bg-white" style={{ color: "#8E3415" }}>Start earning</Link>
             </div>
             <ul className="list-none m-0 p-0 flex flex-col gap-3">
               {[
-                ["Recurring", "Earn 2% every month for as long as the tenant keeps paying rent through PG Connect."],
+                ["Recurring", "Earn 2% every month for as long as the tenant keeps paying rent through PGCON."],
                 ["One-time", "Earn a larger share on the first booking only, then it's done."],
                 ["Payouts", "Commission builds up in your balance. Request a payout once you cross ₹100."],
               ].map(([t, d]) => (
