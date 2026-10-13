@@ -1,3 +1,4 @@
+import { roomLabel } from "../../../lib/listing";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SITE_URL } from "../../../lib/site";
@@ -373,7 +374,7 @@ export default async function PropertyDetailPage({ params, searchParams }) {
                   return (
                     <div key={room.id || room.type} className="rounded-[22px] p-5 flex flex-wrap items-center justify-between gap-4" style={{ background: "var(--pg-bg)" }}>
                       <div className="flex flex-col gap-1 min-w-[180px] flex-1">
-                        <span className="display text-xl font-bold">{room.type} sharing</span>
+                        <span className="display text-xl font-bold">{roomLabel(room.type)}</span>
                         {room.description && <span className="text-sm text-[var(--pg-text-secondary)]">{room.description}</span>}
                         <div className="flex flex-wrap gap-1.5 mt-2" aria-label={`${free} of ${total} beds free`}>
                           {Array.from({ length: Math.min(total, 40) }, (_, i) => (

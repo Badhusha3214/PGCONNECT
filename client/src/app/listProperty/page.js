@@ -6,12 +6,10 @@ import { useSearchParams } from "next/navigation";
 import { createProperty, getCurrentUser } from "../api";
 import { supabase } from "../../lib/supabase";
 import { MAX_PHOTOS, PHOTO_TYPES, PHOTO_ACCEPT, compressPhoto } from "../../lib/photos";
+import { AMENITIES, ROOM_TYPES, roomLabel } from "../../lib/listing";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-const AMENITIES = ["Wi-Fi", "AC", "Meals", "Laundry", "Kitchen", "Security", "Gym", "Parking"];
-// Must match the property_rooms.type CHECK constraint (Single/Double/Triple).
-const ROOM_TYPES = ["Single", "Double", "Triple"];
 
 export default function ListProperty() {
   return (
@@ -73,6 +71,7 @@ function ListPropertyForm() {
       type: "Single",
       price: "",
       totalBeds: "",
+      availableBeds: "",
       description: "",
     },
   ]);
@@ -136,6 +135,7 @@ function ListPropertyForm() {
         type: "Single",
         price: "",
         totalBeds: "",
+        availableBeds: "",
         description: "",
       },
     ]));
@@ -165,6 +165,8 @@ function ListPropertyForm() {
       type: room.type,
       price: Number(room.price),
       total_beds: Number(room.totalBeds),
+      // Empty means every bed is free right now.
+      available_beds: room.availableBeds === "" ? Number(room.totalBeds) : Number(room.availableBeds),
       description: room.description.trim(),
     }))));
     return fd;
@@ -177,6 +179,16 @@ function ListPropertyForm() {
 
     if (!form.name || !form.address || !form.city || !form.state || !form.managerName || rooms.length === 0 || hasInvalidRoom) {
       setSubmitError("Please fill in the required fields.");
+      return;
+    }
+    const types = rooms.map((room) => room.type);
+    if (new Set(types).size !== types.length) {
+      setSubmitError("Each room type can only be added once — put all beds of the same type in one room entry.");
+      return;
+    }
+    const overbooked = rooms.find((room) => room.availableBeds !== "" && Number(room.availableBeds) > Number(room.totalBeds));
+    if (overbooked) {
+      setSubmitError(`The ${roomLabel(overbooked.type)} room can't have more beds available (${overbooked.availableBeds}) than in total (${overbooked.totalBeds}).`);
       return;
     }
     if (photos.length === 0) {
@@ -462,7 +474,7 @@ function ListPropertyForm() {
                               className="w-full bg-white dark:bg-slate-800 border border-[var(--pg-border)] focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] outline-none transition-all"
                             >
                               {ROOM_TYPES.map((type) => (
-                                <option key={type} value={type}>{type}</option>
+                                <option key={type} value={type}>{roomLabel(type)}</option>
                               ))}
                             </select>
                           </div>
@@ -489,6 +501,19 @@ function ListPropertyForm() {
                               required
                               className="w-full bg-white dark:bg-slate-800 border border-[var(--pg-border)] focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] placeholder-slate-400 outline-none transition-all"
                             />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-2">Available Now</label>
+                            <input
+                              type="number"
+                              placeholder={room.totalBeds || "All beds"}
+                              value={room.availableBeds}
+                              onChange={(e) => updateRoom(index, "availableBeds", e.target.value)}
+                              min="0"
+                              max={room.totalBeds || undefined}
+                              className="w-full bg-white dark:bg-slate-800 border border-[var(--pg-border)] focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] placeholder-slate-400 outline-none transition-all"
+                            />
+                            <p className="mt-1 text-[11px] text-[var(--pg-text-tertiary)]">Leave empty if every bed is free. Don&apos;t count beds your current tenants use.</p>
                           </div>
                         </div>
 

@@ -1,4 +1,5 @@
 "use client";
+import { ROOM_TYPES as ALL_ROOM_TYPES } from "../../lib/listing";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -174,7 +175,7 @@ function SearchResultsContent() {
   };
 
   const AMENITY_CHIPS = ["WiFi", "AC", "Gym", "Meals", "Laundry", "Security"];
-  const ROOM_TYPES = ["Single", "Double", "Triple"];
+  const ROOM_TYPES = ALL_ROOM_TYPES;
 
   const toggleRoomType = (t) => setRoomTypes((p) => p.includes(t) ? p.filter((x) => x !== t) : [...p, t]);
   const toggleAmenity = (a) => setAmenities((p) => p.includes(a) ? p.filter((x) => x !== a) : [...p, a]);
