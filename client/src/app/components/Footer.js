@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import { CITIES, cityPath } from "../../lib/cities";
 
 const COLUMNS = [
   {
@@ -61,6 +62,19 @@ export default function Footer() {
             ))}
           </div>
         </div>
+        {/* Every page links to every city page, so search engines find and rank them. */}
+        <nav aria-label="PGs by city" className="flex flex-col gap-3">
+          <span className="font-bold text-[15px] text-[var(--pg-ink)]">PGs &amp; hostels by city</span>
+          <ul className="list-none m-0 p-0 flex flex-wrap gap-x-5 gap-y-2 text-[14px]">
+            {CITIES.map((c) => (
+              <li key={c.slug}>
+                <Link href={cityPath(c)} className="text-[var(--pg-text-secondary)] no-underline hover:text-[var(--pg-terracotta)] transition-colors">
+                  PG in {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className="kasavu opacity-60" aria-hidden="true" />
         <div className="flex flex-wrap justify-between gap-3 text-[13px] text-[var(--pg-text-tertiary)]">
           <span>© {year} PGCON · Kerala, India</span>

@@ -26,10 +26,18 @@ const photoHeaders = secureHeaders({ crossOriginResourcePolicy: 'cross-origin' }
 app.use('*', (c, next) =>
   c.req.path.startsWith('/api/properties/images/') ? photoHeaders(c, next) : strictHeaders(c, next)
 )
+// Sites allowed to call the API from the browser. CLIENT_URL is the primary
+// site (used for email links); the rest keep every live address working.
+const ALLOWED_ORIGINS = [
+  'https://pgcon.in',
+  'https://www.pgcon.in',
+  'https://pgconnect-zeta.vercel.app',
+]
 app.use('*', cors({
   origin: (origin, c) => {
-    const allowed = c.env?.CLIENT_URL ?? 'http://localhost:3000'
-    if (!origin || origin === allowed) return origin ?? allowed
+    const primary = (c.env?.CLIENT_URL ?? 'http://localhost:3000').replace(/\/+$/, '')
+    if (!origin) return primary
+    if (origin === primary || ALLOWED_ORIGINS.includes(origin)) return origin
     // Allow localhost variants during dev
     if (origin.startsWith('http://localhost:')) return origin
     return null

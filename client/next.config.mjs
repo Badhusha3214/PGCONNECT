@@ -7,6 +7,19 @@ const nextConfig = {
   async rewrites() {
     return SUPABASE_URL ? [{ source: "/sb/:path*", destination: `${SUPABASE_URL}/:path*` }] : [];
   },
+  // The old Vercel address still serves the site; send it (permanently) to the
+  // real domain so Google never splits ranking between two hosts. Preview
+  // deployments use other hostnames and are unaffected.
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "pgconnect-zeta.vercel.app" }],
+        destination: "https://www.pgcon.in/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

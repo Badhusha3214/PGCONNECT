@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cityHref } from "../../lib/cities";
 import { FAQ_GROUPS } from "../help/faqs";
 import { reviewerName } from "./data";
 
@@ -218,7 +219,7 @@ export function BrowseByCity({ cities, pgs }) {
             ? { backgroundImage: `url("${photo}")` }
             : { background: `linear-gradient(160deg, ${light} 0%, ${dark} 100%)` };
           return (
-            <Link key={c} href={search({ location: c })} className="city lift reveal" aria-label={`PGs in ${c}`}>
+            <Link key={c} href={cityHref(c)} className="city lift reveal" aria-label={`PGs in ${c}`}>
               <span className="zoom" style={bg} />
               <span aria-hidden="true" className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(8,20,17,.72) 100%)" }} />
               {ML[c] && <span className="ml relative text-[15px]" style={{ color: "#FFD27A" }} lang="ml">{ML[c]}</span>}

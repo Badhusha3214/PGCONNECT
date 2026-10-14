@@ -21,7 +21,7 @@ const registerSchema = z.object({
 // Where the "Confirm your email" link lands after Supabase verifies it.
 // Must also be listed under Supabase → Authentication → URL Configuration → Redirect URLs.
 const confirmRedirect = (env: Env['Bindings']) =>
-  `${(env.CLIENT_URL || 'https://pgconnect-zeta.vercel.app').replace(/\/+$/, '')}/signin?confirmed=1`
+  `${(env.CLIENT_URL || 'https://www.pgcon.in').replace(/\/+$/, '')}/signin?confirmed=1`
 
 const loginSchema = z.object({
   email: z.string().email(),

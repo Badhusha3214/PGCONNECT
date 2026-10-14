@@ -1,5 +1,7 @@
 import HomeClient from "./HomeClient";
 import { pageMetadata, SITE_URL, SITE_NAME } from "../lib/site";
+import { CITIES, cityPath } from "../lib/cities";
+import { CONTACT_EMAIL, CONTACT_PHONES } from "../lib/contact";
 import { apiGet } from "../lib/serverApi";
 import { INTRO_SEEN_SCRIPT } from "./home/IntroLoader";
 
@@ -13,9 +15,30 @@ const siteSchema = [
   {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: SITE_NAME,
+    alternateName: "PGCON Kerala",
     url: SITE_URL,
-    logo: `${SITE_URL}/icon-512x512.png`,
+    logo: { "@type": "ImageObject", url: `${SITE_URL}/icon-512x512.png`, width: 512, height: 512 },
+    description:
+      "PGCON is a marketplace for verified PGs, hostels and co-living spaces across Kerala, India, with live bed availability, transparent rent and online booking.",
+    areaServed: [
+      { "@type": "State", name: "Kerala", containedInPlace: { "@type": "Country", name: "India" } },
+      ...CITIES.map((c) => ({ "@type": "City", name: c.name, url: `${SITE_URL}${cityPath(c)}` })),
+    ],
+    knowsAbout: ["Paying guest accommodation", "Student hostels", "Co-living", "PG rentals in Kerala"],
+    email: CONTACT_EMAIL,
+    telephone: CONTACT_PHONES[0].tel,
+    contactPoint: CONTACT_PHONES.map((p) => ({
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      telephone: p.tel,
+      email: CONTACT_EMAIL,
+      areaServed: "IN",
+      availableLanguage: ["English", "Malayalam"],
+    })),
+    // Add official profiles here once they exist (Instagram, LinkedIn, Google Business Profile):
+    // sameAs: ["https://www.instagram.com/…"],
   },
   {
     "@context": "https://schema.org",

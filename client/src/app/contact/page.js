@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { pageMetadata } from "../../lib/site";
+import { CONTACT_EMAIL, CONTACT_PHONES, CONTACT_HOURS } from "../../lib/contact";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import PageHero from "../components/PageHero";
@@ -15,8 +16,16 @@ const icon = (d) => (
 );
 
 const CHANNELS = [
-  { label: "Email", value: "support@pgconnect.com", note: "Replies within a working day", href: "mailto:support@pgconnect.com", bg: "#FCEDE6", fg: "#B4461F", icon: icon(<><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 6l-10 7L2 6" /></>) },
-  { label: "Call or WhatsApp", value: "+91 98765 43210", note: "Mon–Sat, 9 AM – 7 PM", href: "tel:+919876543210", bg: "#E9F5EE", fg: "#1F6B4A", icon: icon(<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />) },
+  { label: "Email", value: CONTACT_EMAIL, note: "Replies within a working day", href: `mailto:${CONTACT_EMAIL}`, bg: "#FCEDE6", fg: "#B4461F", icon: icon(<><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 6l-10 7L2 6" /></>) },
+  ...CONTACT_PHONES.map((p, i) => ({
+    label: i === 0 ? "Call us" : "Call us (alternate)",
+    value: p.display,
+    note: CONTACT_HOURS,
+    href: `tel:${p.tel}`,
+    bg: "#E9F5EE",
+    fg: "#1F6B4A",
+    icon: icon(<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />),
+  })),
   { label: "Office", value: "Kochi, Kerala, India", note: "Visits by appointment", href: null, bg: "#FFF4D6", fg: "#9A6A00", icon: icon(<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></>) },
 ];
 

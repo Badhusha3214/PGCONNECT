@@ -44,6 +44,12 @@ export const metadata = {
     images: [DEFAULT_OG_IMAGE.url],
   },
   category: "real-estate",
+  // Search Console / Bing ownership tags — set the codes in Vercel env vars
+  // (only needed if you verify with an HTML tag instead of a DNS record).
+  verification: {
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } : {}),
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ? { other: { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } } : {}),
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -70,7 +76,7 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html
-      lang="en"
+      lang="en-IN"
       className={`${bricolage.variable} ${figtree.variable} ${manjari.variable} ${jetbrains.variable} h-full antialiased`}
       suppressHydrationWarning
     >

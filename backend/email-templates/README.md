@@ -17,8 +17,8 @@ links to localhost.
 
 | Setting | Value |
 |---|---|
-| Site URL | `https://pgconnect-zeta.vercel.app` |
-| Redirect URLs (add all) | `https://pgconnect-zeta.vercel.app/**` and `http://localhost:3000/**` |
+| Site URL | `https://www.pgcon.in` |
+| Redirect URLs (add all) | `https://www.pgcon.in/**`, `https://pgcon.in/**`, `https://pgconnect-zeta.vercel.app/**` and `http://localhost:3000/**` |
 
 `{{ .SiteURL }}` in the templates comes from **Site URL**. The signup link's
 final landing page (`/signin?confirmed=1`) comes from the backend's

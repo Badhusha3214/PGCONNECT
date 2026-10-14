@@ -251,7 +251,10 @@ details[open] .faq-plus { transform: rotate(45deg); }
 
 /* ── Intro loader (first visit per session; see home/IntroLoader.js) ─────── */
 @property --pct { syntax: "<integer>"; inherits: true; initial-value: 0; }
-.intro-on { --d: 3.05s; }
+/* The page renders underneath the intro from the start (no extra delay), so its
+   headline is painted immediately — good LCP for Google whatever the intro length —
+   and the intro panels open onto a page that is already complete. */
+.intro-on { --d: 0s; }
 html[data-intro="seen"] .intro-on { --d: 0s; }
 html[data-intro="seen"] .ld { display: none; }
 .ld { position: fixed; inset: 0; z-index: 100; pointer-events: none; animation: ldOff 0s linear 3.45s forwards; }

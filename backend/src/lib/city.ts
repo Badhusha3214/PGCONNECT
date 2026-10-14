@@ -3,6 +3,7 @@
 const CITY_ALIASES: Record<string, string> = {
   trivandrum: 'Thiruvananthapuram',
   cochin: 'Kochi',
+  ernakulam: 'Kochi',
   calicut: 'Kozhikode',
   trichur: 'Thrissur',
   alleppey: 'Alappuzha',

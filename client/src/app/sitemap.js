@@ -1,4 +1,5 @@
 import { SITE_URL } from "../lib/site";
+import { CITIES, cityPath } from "../lib/cities";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 const PAGE_SIZE = 100; // backend max page size
@@ -10,6 +11,8 @@ async function fetchAllProperties() {
     for (let page = 1; page <= MAX_PAGES; page++) {
       const response = await fetch(`${API_URL}/api/properties?limit=${PAGE_SIZE}&page=${page}`, {
         next: { revalidate: 1800 },
+        // Don't let a stalled API hang the sitemap; the catch below serves what we have.
+        signal: AbortSignal.timeout(8000),
       });
       if (!response.ok) break;
       const data = await response.json();
@@ -30,6 +33,13 @@ export default async function sitemap() {
     url: `${SITE_URL}${path}`,
   }));
 
+  // City landing pages are the main entry point from searches like "PG in Kochi".
+  const cityRoutes = CITIES.map((city) => ({
+    url: `${SITE_URL}${cityPath(city)}`,
+    changeFrequency: "daily",
+    priority: 0.9,
+  }));
+
   const propertyRoutes = properties
     .filter((item) => item?.id)
     .map((item) => ({
@@ -37,5 +47,5 @@ export default async function sitemap() {
       ...(item.updated_at ? { lastModified: new Date(item.updated_at) } : {}),
     }));
 
-  return [...staticRoutes, ...propertyRoutes];
+  return [...staticRoutes, ...cityRoutes, ...propertyRoutes];
 }

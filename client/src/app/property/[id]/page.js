@@ -1,5 +1,6 @@
 import { roomLabel } from "../../../lib/listing";
 import Link from "next/link";
+import { cityHref, cityByName, cityPath } from "../../../lib/cities";
 import { notFound } from "next/navigation";
 import { SITE_URL } from "../../../lib/site";
 import { cache } from "react";
@@ -144,6 +145,11 @@ const buildStructuredData = (property, propertyId, images) => {
     },
   }));
 
+  const prices = (property?.property_rooms || []).map((r) => Number(r.price)).filter((n) => n > 0);
+  const lat = Number(property?.lat);
+  const lng = Number(property?.lng);
+  const city = cityByName(property?.city);
+
   return {
     "@context": "https://schema.org",
     "@type": "LodgingBusiness",
@@ -158,6 +164,15 @@ const buildStructuredData = (property, propertyId, images) => {
       addressRegion: property?.state || "",
       addressCountry: "IN",
     },
+    // Local signals for Maps / "near me" and AI answers: exact location, price
+    // band and the city page this PG belongs to.
+    ...(property?.lat != null && property?.lng != null && Number.isFinite(lat) && Number.isFinite(lng)
+      ? { geo: { "@type": "GeoCoordinates", latitude: lat, longitude: lng } }
+      : {}),
+    ...(prices.length
+      ? { priceRange: `₹${Math.min(...prices).toLocaleString("en-IN")}–₹${Math.max(...prices).toLocaleString("en-IN")} per bed per month` }
+      : {}),
+    ...(city ? { containedInPlace: { "@type": "City", name: city.name, url: `${SITE_URL}${cityPath(city)}` } } : {}),
     telephone: property?.manager_phone || property?.owner?.phone || "",
     amenityFeature: (property?.amenities || []).map((amenity) => ({
       "@type": "LocationFeatureSpecification",
@@ -271,7 +286,7 @@ export default async function PropertyDetailPage({ params, searchParams }) {
   const rooms = Array.isArray(property?.property_rooms) ? property.property_rooms : [];
   const amenities = Array.isArray(property?.amenities) ? property.amenities : [];
   const schema = buildStructuredData(property, id, images);
-  const citySearchHref = `/propertys?location=${encodeURIComponent(property.city || "")}`;
+  const citySearchHref = cityHref(property.city);
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

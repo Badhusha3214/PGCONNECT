@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { cityHref } from "../../lib/cities";
 import { useRouter } from "next/navigation";
 
 // Price bands exactly as in the design; values are the labels the search
@@ -105,7 +106,7 @@ export default function Hero({ cities }) {
           <div className="hin i8 flex flex-wrap items-center gap-2 text-sm">
             <span className="font-bold text-[var(--pg-text-secondary)] mr-1">Popular:</span>
             {cities.slice(0, 4).map((c) => (
-              <Link key={c} href={`/propertys?location=${encodeURIComponent(c)}`} className="text-[var(--pg-ink)] no-underline bg-white border border-[rgba(16,35,31,.12)] rounded-full px-3.5 min-h-10 inline-flex items-center font-semibold hover:border-[var(--pg-ink)] transition-colors">
+              <Link key={c} href={cityHref(c)} className="text-[var(--pg-ink)] no-underline bg-white border border-[rgba(16,35,31,.12)] rounded-full px-3.5 min-h-10 inline-flex items-center font-semibold hover:border-[var(--pg-ink)] transition-colors">
                 PG in {c}
               </Link>
             ))}

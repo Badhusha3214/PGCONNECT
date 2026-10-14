@@ -27,3 +27,5 @@ dist-ssr
 backend/.env
 .dev.vars
 *.local
+# Production secrets, only used to upload Worker secrets — never commit
+.prod.vars
