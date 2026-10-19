@@ -39,6 +39,7 @@ ${cityLines}
 - [How it works](${SITE_URL}/how-it-works): booking, verification, payments, owner pricing and referrals
 - [Help center / FAQ](${SITE_URL}/help): common questions from students, parents and owners
 - [List your PG](${SITE_URL}/listProperty): for PG owners
+- [About](${SITE_URL}/about): who runs PGCON, how PGs are verified, and how PGCON makes money (not affiliated with the PostgreSQL PGCon conference)
 - [Contact](${SITE_URL}/contact): ${CONTACT_EMAIL}, ${CONTACT_PHONES.map((p) => p.display).join(" / ")}
 
 ## Optional

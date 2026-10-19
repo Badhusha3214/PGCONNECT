@@ -245,7 +245,9 @@ export function ForParents() {
         <div className="reveal flex flex-col gap-[22px] lg:sticky lg:top-[110px]">
           <span className="eyebrow">For parents</span>
           <H2 size="clamp(38px, 4.6vw, 64px)">You&apos;ll see what we saw when we visited.</H2>
-          <p className="m-0 text-lg leading-relaxed text-[var(--pg-text-secondary)] max-w-[460px]">Sending your child to a new town is a big decision. Every PG on PGCON has been walked through by our team, and you can read the full visit report before a single rupee changes hands.</p>
+          <p className="m-0 text-lg leading-relaxed text-[var(--pg-text-secondary)] max-w-[460px]">Sending your child to a new town is a big decision. Every PG on PGCON has been walked through by our team before it goes live.</p>
+          {/* Restore once visit reports are built (after 350 PGs):
+              "…and you can read the full visit report before a single rupee changes hands." */}
           <div className="kasavu w-[120px] mt-2" aria-hidden="true" />
         </div>
         <div className="flex flex-col gap-[18px]">
@@ -257,7 +259,8 @@ export function ForParents() {
                 </span>
                 <div className="flex flex-col gap-0.5">
                   <h3 className="display m-0 text-[22px] font-bold tracking-[-0.02em]">Verified in person</h3>
-                  <span className="text-[13px]" style={{ color: "#5B6762" }}>Visit report · Meenachil House</span>
+                  {/* Visit reports not built yet (after 350 PGs).
+                  <span className="text-[13px]" style={{ color: "#5B6762" }}>Visit report · Meenachil House</span> */}
                 </div>
               </div>
               <span className="text-xs font-bold px-3 py-1.5 rounded-full" style={{ background: "#E9F5EE", color: "#1F6B4A" }}>All checks passed</span>
@@ -282,6 +285,7 @@ export function ForParents() {
               <p className="m-0 text-[15px] leading-relaxed text-[var(--pg-text-secondary)]">Only students who booked and stayed through PGCON can leave a review. Owners can reply, but they can&apos;t edit or remove one.</p>
             </div>
           </div>
+          {/* Parent share link not built yet (after 350 PGs).
           <div className="reveal rounded-[30px] px-7 py-[26px] flex flex-wrap items-center justify-between gap-[18px]" style={{ background: "#0F3B33", color: "#F5F3EE" }}>
             <div className="flex flex-col gap-1 max-w-[420px]">
               <span className="display text-xl font-bold">Share the bed with home before booking.</span>
@@ -289,6 +293,7 @@ export function ForParents() {
             </div>
             <Link href="/propertys" className="inline-flex items-center min-h-12 px-[22px] rounded-full font-bold text-[15px] no-underline" style={{ background: "#FFC447", color: "#2A1C00" }}>Send to a parent</Link>
           </div>
+          */}
         </div>
       </div>
     </section>
@@ -300,7 +305,7 @@ const OWNER_BEDS = [1, 1, 1, 0, 1, 1, 1, 1, 2, 1, 1, 1, 0, 1, 1, 1, 1, 0, 2, 1];
 const badge = (bg, fg) => ({ fontSize: 12, fontWeight: 700, padding: "5px 10px", borderRadius: 999, background: bg, color: fg });
 const RENT_ROWS = [
   ["Bed 1A", "Paid 2 Oct", "Paid", badge("#E9F5EE", "#1F6B4A")],
-  ["Bed 2A", "Due 5 Oct", "Reminder sent", badge("#FFF4D6", "#7A5300")],
+  ["Bed 2A", "Due 5 Oct", "Due", badge("#FFF4D6", "#7A5300")],
   ["Bed 4C", "Due 5 Oct", "Overdue", badge("#FCEDE6", "#8E3415")],
 ];
 
@@ -317,7 +322,8 @@ export function ForOwners() {
             Join our curated network of property owners providing high-quality student housing across Kerala. Then run every bed, payment and enquiry from one dashboard.
           </p>
           <ul className="list-none m-0 p-0 flex flex-col gap-3 text-base font-medium">
-            {["Live bed board that updates your listing automatically", "Rent reminders and Razorpay collection", "Resident records, agreements and parent contacts in one place"].map((t) => (
+            {/* Not built yet (after 350 PGs): rent reminders; "Resident records, agreements and parent contacts in one place". */}
+            {["Live bed board that updates your listing automatically", "Rent tracking and Razorpay collection"].map((t) => (
               <li key={t} className="flex gap-3 items-center"><Check color="#FFC447" size={20} />{t}</li>
             ))}
           </ul>

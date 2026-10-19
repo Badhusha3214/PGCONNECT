@@ -9,3 +9,11 @@ export const CONTACT_PHONES = [
 ];
 
 export const CONTACT_HOURS = "Mon–Sat, 9 AM – 7 PM";
+
+// The company that runs PGCON (shown on /about and in the Organization schema).
+export const COMPANY_NAME = "DevMorphix IT Solutions";
+
+// Official profiles. Each one becomes an Organization `sameAs` link and a link
+// on /about, which helps search engines tell PGCON apart from other "PGCon"s.
+// Add real URLs only, e.g. { name: "Instagram", url: "https://www.instagram.com/…" }.
+export const SOCIAL_PROFILES = [];

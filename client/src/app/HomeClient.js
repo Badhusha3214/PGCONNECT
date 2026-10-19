@@ -3,7 +3,8 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import IntroLoader from "./home/IntroLoader";
 import Hero from "./home/Hero";
-import Features from "./home/Features";
+// Hidden until built (planned after 350 live PGs; see "PG Connect" note in Obsidian):
+// import Features from "./home/Features";
 import FeaturedPGs from "./home/FeaturedPGs";
 import Referral from "./home/Referral";
 import { CityMarquee, Collections, HowItWorks, BrowseByCity, ForParents, ForOwners, Testimonials, Faq, FinalCta } from "./home/Sections";
@@ -30,7 +31,8 @@ export default function HomeClient({ initialProperties = [], stats = null, revie
         <div className="rule-draw max-w-[1232px] mx-auto" aria-hidden="true" style={{ height: 7, borderTop: "2px solid #C99A2E", borderBottom: "1px solid #C99A2E", opacity: 0.7 }} />
         <Collections />
         <HowItWorks />
-        <Features />
+        {/* Bed picker, commute rings, vibe tags, day-in-the-life: not built yet. */}
+        {/* <Features /> */}
         <FeaturedPGs pgs={pgs} cities={cities} />
         <BrowseByCity cities={cities} pgs={pgs} />
         <ForParents />

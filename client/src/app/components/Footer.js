@@ -33,6 +33,7 @@ const LEGAL = [
   { label: "Privacy", href: "/privacy" },
   { label: "Terms", href: "/terms" },
   { label: "Cookies", href: "/cookie-policy" },
+  { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
 ];
 

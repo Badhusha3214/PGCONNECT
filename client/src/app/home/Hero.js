@@ -57,22 +57,23 @@ export default function Hero({ cities }) {
             <span className="ml text-[17px] text-[var(--pg-terracotta)]" lang="ml">കേരളം</span>
           </div>
 
-          <h1 className="display m-0 font-extrabold" aria-label="Find your perfect PG near your campus." style={{ fontSize: "clamp(50px, 6vw, 96px)", lineHeight: 0.95, letterSpacing: "-0.045em" }}>
-            <span aria-hidden="true">
-              <Word i={2}>Find</Word> <Word i={3}>your</Word> <Word i={4}>perfect</Word> <Word i={5}>PG</Word>
-              <br />
-              <Word i={6}>near</Word> <Word i={6}>your</Word>{" "}
-              <span className="relative inline-block">
-                <Word i={7} style={{ color: "var(--pg-terracotta)" }}>campus.</Word>
-                <svg className="uline absolute left-0 w-full overflow-visible" aria-hidden="true" viewBox="0 0 300 24" preserveAspectRatio="none" style={{ bottom: "-0.06em", height: "0.2em" }}>
-                  <path pathLength="1" d="M4 16 C 70 4, 150 4, 296 12" fill="none" stroke="#C99A2E" strokeWidth="6" strokeLinecap="round" />
-                </svg>
-              </span>
+          {/* The words are real text (no aria-hidden/aria-label), so search
+              engines, SEO checkers and screen readers all read the same heading. */}
+          <h1 className="display m-0 font-extrabold" style={{ fontSize: "clamp(50px, 6vw, 96px)", lineHeight: 0.95, letterSpacing: "-0.045em" }}>
+            <Word i={2}>Find</Word> <Word i={3}>your</Word> <Word i={4}>perfect</Word> <Word i={5}>PG</Word>{" "}
+            <br />
+            <Word i={6}>near</Word> <Word i={6}>your</Word>{" "}
+            <span className="relative inline-block">
+              <Word i={7} style={{ color: "var(--pg-terracotta)" }}>campus.</Word>
+              <svg className="uline absolute left-0 w-full overflow-visible" aria-hidden="true" viewBox="0 0 300 24" preserveAspectRatio="none" style={{ bottom: "-0.06em", height: "0.2em" }}>
+                <path pathLength="1" d="M4 16 C 70 4, 150 4, 296 12" fill="none" stroke="#C99A2E" strokeWidth="6" strokeLinecap="round" />
+              </svg>
             </span>
           </h1>
 
+          {/* Echoes the heading's words and names the brand, so the H1 matches the page copy. */}
           <p className="hin i6 m-0 text-xl text-[var(--pg-text-secondary)] max-w-[520px]" style={{ lineHeight: 1.55, textWrap: "pretty" }}>
-            Kerala&apos;s trusted PG marketplace for students. Verified listings, transparent pricing, and a referral program that rewards your network.
+            PGCON helps you find the perfect PG near your campus — Kerala&apos;s trusted PG marketplace for students, with verified listings, transparent pricing and a referral program that rewards your network.
           </p>
 
           <form id="search" onSubmit={onSearch} className="hin i7 bg-white rounded-[28px] p-2.5 flex flex-col gap-2" aria-label="Search PGs" style={{ boxShadow: "0 30px 70px -30px rgba(16,35,31,.35), 0 1px 0 rgba(16,35,31,.06)" }}>
@@ -124,6 +125,7 @@ export default function Hero({ cities }) {
 
         {/* Hero visual: lamp-lit floor plan */}
         <div className="hin i3 relative">
+          {/* Hidden until built (after 350 PGs): bedmate vibe tags and commute times.
           <div className="float absolute z-[3]" aria-hidden="true" style={{ top: "16%", right: -18 }}>
             <div className="hin i10 flex items-center gap-2 bg-white text-[var(--pg-ink)] rounded-full px-3.5 py-[9px] text-[13px] font-bold" style={{ boxShadow: "0 18px 40px -16px rgba(16,35,31,.45)" }}>
               <span className="w-2 h-2 rounded-full" style={{ background: "#2E9E6B" }} />Bedmate: quiet studier
@@ -135,6 +137,7 @@ export default function Hero({ cities }) {
               6 min to campus
             </div>
           </div>
+          */}
 
           <div className="relative rounded-[36px] p-7 overflow-hidden" style={{ background: "#0F3B33", boxShadow: "0 50px 100px -40px rgba(15,59,51,.65)" }}>
             <FloorPlan />

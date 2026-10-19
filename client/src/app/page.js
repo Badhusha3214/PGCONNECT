@@ -1,7 +1,7 @@
 import HomeClient from "./HomeClient";
 import { pageMetadata, SITE_URL, SITE_NAME } from "../lib/site";
 import { CITIES, cityPath } from "../lib/cities";
-import { CONTACT_EMAIL, CONTACT_PHONES } from "../lib/contact";
+import { CONTACT_EMAIL, CONTACT_PHONES, COMPANY_NAME, SOCIAL_PROFILES } from "../lib/contact";
 import { apiGet } from "../lib/serverApi";
 import { INTRO_SEEN_SCRIPT } from "./home/IntroLoader";
 
@@ -37,8 +37,9 @@ const siteSchema = [
       areaServed: "IN",
       availableLanguage: ["English", "Malayalam"],
     })),
-    // Add official profiles here once they exist (Instagram, LinkedIn, Google Business Profile):
-    // sameAs: ["https://www.instagram.com/…"],
+    // Official profiles live in lib/contact.js (SOCIAL_PROFILES).
+    ...(SOCIAL_PROFILES.length ? { sameAs: SOCIAL_PROFILES.map((p) => p.url) } : {}),
+    parentOrganization: { "@type": "Organization", name: COMPANY_NAME },
   },
   {
     "@context": "https://schema.org",

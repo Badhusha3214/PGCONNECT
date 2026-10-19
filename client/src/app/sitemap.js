@@ -29,7 +29,7 @@ async function fetchAllProperties() {
 export default async function sitemap() {
   const properties = await fetchAllProperties();
 
-  const staticRoutes = ["", "/propertys", "/how-it-works", "/help", "/contact"].map((path) => ({
+  const staticRoutes = ["", "/propertys", "/how-it-works", "/help", "/about", "/contact"].map((path) => ({
     url: `${SITE_URL}${path}`,
   }));
 
