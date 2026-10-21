@@ -68,11 +68,15 @@ function ResetPasswordForm() {
     router.push("/signin?reset=1");
   };
 
+  // An owner whose PG an agent/admin onboarded arrives here from their invite email.
+  const invited = params.get("invited") === "1" || params.get("type") === "invite";
+  const eyebrow = invited ? "Welcome to PGCON" : "Reset password";
+
   const back = <p className="m-0 text-[15px] text-[var(--pg-text-secondary)]"><Link href="/signin" className="font-bold">Back to log in</Link></p>;
 
   if (status === "verifying") {
     return (
-      <AuthShell eyebrow="Reset password" title="Checking your" accent="link…" intro="One moment while we verify your reset link." footer={back}>
+      <AuthShell eyebrow={eyebrow} title="Checking your" accent="link…" intro="One moment while we verify your link." footer={back}>
         <div className="h-2 rounded-full overflow-hidden" style={{ background: "var(--pg-surface-muted)" }}>
           <div className="h-full w-1/3 rounded-full pg-gradient-animated" style={{ background: "linear-gradient(90deg, #FFC447, #B4461F, #FFC447)" }} />
         </div>
@@ -82,7 +86,7 @@ function ResetPasswordForm() {
 
   if (status === "invalid") {
     return (
-      <AuthShell eyebrow="Reset password" title="This link has" accent="expired." intro="Reset links work once and expire after an hour. Request a fresh one and use the newest email." footer={back}>
+      <AuthShell eyebrow={eyebrow} title="This link has" accent="expired." intro={invited ? "Invite links work once. Enter your email on the next page and we'll send you a fresh link to set your password." : "Reset links work once and expire after an hour. Request a fresh one and use the newest email."} footer={back}>
         <Link href="/forgot-password" className={primaryBtnCls} style={{ background: "var(--pg-terracotta)", boxShadow: "0 12px 28px -10px rgba(180,70,31,.7)" }}>
           Send a new link
         </Link>
@@ -91,7 +95,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <AuthShell eyebrow="Reset password" title="Choose a new" accent="password." intro="Pick something you haven't used before — at least 8 characters." footer={back}>
+    <AuthShell eyebrow={eyebrow} title={invited ? "Set your" : "Choose a new"} accent="password." intro={invited ? "Your PG is on PGCON. Choose a password (at least 8 characters) to manage it from your Owner Dashboard." : "Pick something you haven't used before — at least 8 characters."} footer={back}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error && <div role="alert" className="text-sm font-medium px-4 py-3 rounded-2xl" style={{ background: "var(--pg-danger-bg)", color: "var(--pg-danger)" }}>{error}</div>}
         <div>

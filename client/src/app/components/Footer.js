@@ -50,7 +50,7 @@ export default function Footer() {
             </p>
             <span className="ml text-base text-[var(--pg-terracotta)]" lang="ml">കേരളത്തിൽ നിന്ന്, സ്നേഹത്തോടെ</span>
           </div>
-          <div className="grid gap-8 flex-[1_1_480px] max-w-[640px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+          <div className="grid gap-x-6 gap-y-8 flex-[1_1_320px] min-w-0 max-w-[640px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(130px, 100%), 1fr))" }}>
             {COLUMNS.map((col) => (
               <nav key={col.title} aria-label={col.title} className="flex flex-col gap-2.5 text-[15px]">
                 <span className="font-bold mb-1 text-[var(--pg-ink)]">{col.title}</span>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { createProperty, getCurrentUser } from "../api";
+import { createProperty, onboardProperty, getCurrentUser } from "../api";
 import { supabase } from "../../lib/supabase";
 import { MAX_PHOTOS, PHOTO_TYPES, PHOTO_ACCEPT, compressPhoto } from "../../lib/photos";
 import { AMENITIES, ROOM_TYPES, roomLabel } from "../../lib/listing";
@@ -48,7 +48,21 @@ function ListPropertyForm() {
     return () => { mounted = false; };
   }, []);
 
-  const canListProperty = user && ["owner", "admin"].includes(user.role);
+  const canListProperty = user && ["owner", "admin", "agent"].includes(user.role);
+  const isAgent = user?.role === "agent";
+  // Agents always list for an owner; admins choose. Owners list for themselves.
+  const [adminForOwner, setAdminForOwner] = useState(true);
+  const onboarding = isAgent || (user?.role === "admin" && adminForOwner);
+  const agentAwaitingApproval = isAgent && !user.is_verified_agent;
+  const dashboardPath = isAgent ? "/agentDashboard" : user?.role === "admin" ? "/admin" : "/ownersDashboard";
+  const [onboardedMessage, setOnboardedMessage] = useState("");
+
+  // Keep the agent code (and anything else in the link) through sign-up/sign-in.
+  const query = searchParams?.toString();
+  const nextParam = encodeURIComponent(`/listProperty${query ? `?${query}` : ""}`);
+
+  const [owner, setOwner] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  const updateOwner = (field, value) => setOwner((prev) => ({ ...prev, [field]: value }));
 
   const [form, setForm] = useState({
     name: "",
@@ -159,7 +173,14 @@ function ListPropertyForm() {
     fd.append("amenities", form.amenities.join(","));
     fd.append("commission_option", form.commission_option);
     if (form.referral_code.trim()) fd.append("referral_code", form.referral_code.trim());
-    if (form.agent_code.trim()) fd.append("agent_code", form.agent_code.trim());
+    // An agent onboarding a PG is connected to it automatically.
+    if (form.agent_code.trim() && !isAgent) fd.append("agent_code", form.agent_code.trim());
+    if (onboarding) {
+      fd.append("owner_first_name", owner.firstName.trim());
+      fd.append("owner_last_name", owner.lastName.trim());
+      fd.append("owner_email", owner.email.trim());
+      fd.append("owner_phone", owner.phone.trim());
+    }
     photos.forEach((p) => fd.append("images", p.file));
     fd.append("rooms", JSON.stringify(rooms.map((room) => ({
       type: room.type,
@@ -177,6 +198,10 @@ function ListPropertyForm() {
 
     const hasInvalidRoom = rooms.some((room) => !room.price || !room.totalBeds);
 
+    if (onboarding && (!owner.firstName.trim() || !owner.lastName.trim() || !owner.phone.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(owner.email.trim()))) {
+      setSubmitError("Enter the owner's first name, last name, phone and a valid email — we email them a link to set their password.");
+      return;
+    }
     if (!form.name || !form.address || !form.city || !form.state || !form.managerName || rooms.length === 0 || hasInvalidRoom) {
       setSubmitError("Please fill in the required fields.");
       return;
@@ -207,6 +232,13 @@ function ListPropertyForm() {
 
     try {
       const payload = buildPropertyPayload();
+      if (onboarding) {
+        const response = await onboardProperty(payload);
+        setOnboardedMessage(response?.message || "The owner's account is created and the PG is submitted for review.");
+        setSubmitted(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
       const response = await createProperty(payload);
 
       const listing = {
@@ -253,9 +285,11 @@ function ListPropertyForm() {
         <Navbar />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 pt-10 sm:pt-14 pb-4">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--pg-text)] tracking-tight">List Your Property</h1>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[var(--pg-text)] tracking-tight">{onboarding ? "Onboard a PG" : "List Your Property"}</h1>
           <p className="mt-3 text-[var(--pg-text-tertiary)] text-sm sm:text-base max-w-lg leading-relaxed">
-            Reach thousands of students looking for verified PG accommodation across Kerala.
+            {onboarding
+              ? "List a PG for an owner who isn't on PGCON yet. We create their owner account and email them a link to set their password."
+              : "Reach thousands of students looking for verified PG accommodation across Kerala."}
           </p>
         </div>
 
@@ -283,13 +317,13 @@ function ListPropertyForm() {
                 </p>
                 <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
-                    onClick={() => router.push("/register?role=owner&next=/listProperty")}
+                    onClick={() => router.push(`/register?role=owner&next=${nextParam}`)}
                     className="w-full sm:w-auto bg-[var(--pg-accent)] hover:bg-[var(--pg-accent-dark)] text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors cursor-pointer"
                   >
                     Create Account
                   </button>
                   <button
-                    onClick={() => router.push("/signin?next=/listProperty")}
+                    onClick={() => router.push(`/signin?next=${nextParam}`)}
                     className="w-full sm:w-auto border border-[var(--pg-border)] text-[var(--pg-text)] text-sm font-semibold px-6 py-3 rounded-xl hover:border-[var(--pg-primary)] hover:text-[var(--pg-primary)] transition-colors cursor-pointer"
                   >
                     Sign In
@@ -306,7 +340,7 @@ function ListPropertyForm() {
                 </p>
                 <div className="mt-6">
                   <button
-                    onClick={() => router.push("/register?role=owner&next=/listProperty")}
+                    onClick={() => router.push(`/register?role=owner&next=${nextParam}`)}
                     className="bg-[var(--pg-accent)] hover:bg-[var(--pg-accent-dark)] text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors cursor-pointer"
                   >
                     Create Owner Account
@@ -315,12 +349,100 @@ function ListPropertyForm() {
               </div>
             )}
 
-            {!checkingAuth && canListProperty && (
+            {!checkingAuth && agentAwaitingApproval && (
+              <div className="bg-white dark:bg-slate-800 border border-[var(--pg-border)] rounded-2xl p-8 sm:p-10 shadow-sm text-center">
+                <h2 className="text-xl font-bold text-[var(--pg-text)]">Your agent account is waiting for approval</h2>
+                <p className="mt-2 text-sm text-[var(--pg-text-secondary)] max-w-sm mx-auto">
+                  Once PGCON approves your account, you can onboard PGs and create accounts for their owners here.
+                </p>
+                <div className="mt-6">
+                  <Link href="/agentDashboard" className="inline-block bg-[var(--pg-primary)] text-white text-sm font-bold px-6 py-3 rounded-xl">
+                    Back to Agent Dashboard
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {!checkingAuth && onboardedMessage && (
+              <div role="status" className="bg-white dark:bg-slate-800 border border-[var(--pg-border)] rounded-2xl p-8 sm:p-10 shadow-sm text-center">
+                <h2 className="text-xl font-bold text-[var(--pg-text)]">PG onboarded</h2>
+                <p className="mt-2 text-sm text-[var(--pg-text-secondary)] max-w-md mx-auto">{onboardedMessage}</p>
+                <p className="mt-2 text-xs text-[var(--pg-text-tertiary)] max-w-md mx-auto">
+                  Ask the owner to check their inbox (and spam folder). After setting a password they can manage the PG from their Owner Dashboard.
+                </p>
+                <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <a href="/listProperty" className="w-full sm:w-auto bg-[var(--pg-accent)] hover:bg-[var(--pg-accent-dark)] text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors">
+                    Onboard another PG
+                  </a>
+                  <Link href={dashboardPath} className="w-full sm:w-auto border border-[var(--pg-border)] text-[var(--pg-text)] text-sm font-semibold px-6 py-3 rounded-xl hover:border-[var(--pg-primary)] transition-colors">
+                    Back to dashboard
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {!checkingAuth && canListProperty && !agentAwaitingApproval && !onboardedMessage && (
             <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 border border-[var(--pg-border)] rounded-2xl p-6 sm:p-8 shadow-sm space-y-8">
               {submitError && (
                 <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-medium px-4 py-2.5 rounded-xl">
                   {submitError}
                 </div>
+              )}
+
+              {user.role === "admin" && (
+                <section className="space-y-3">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)]">Who is this PG for?</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {[
+                      { value: true, label: "A new owner", desc: "Create their account and email them a login link" },
+                      { value: false, label: "My admin account", desc: "List it under your own account" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.label}
+                        type="button"
+                        onClick={() => setAdminForOwner(opt.value)}
+                        className={`rounded-xl border px-4 py-3 text-left transition-all cursor-pointer ${adminForOwner === opt.value ? "border-[var(--pg-primary)] bg-[var(--pg-chip-bg)]" : "border-[var(--pg-border)] bg-white dark:bg-slate-800"}`}
+                      >
+                        <span className={`block text-sm font-semibold ${adminForOwner === opt.value ? "text-[var(--pg-primary)]" : "text-[var(--pg-text)]"}`}>{opt.label}</span>
+                        <span className="block text-xs text-[var(--pg-text-tertiary)] mt-0.5">{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {onboarding && (
+                <section className="space-y-4">
+                  <div>
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)]">Owner&apos;s Account</h3>
+                    <p className="text-xs text-[var(--pg-text-tertiary)] mt-1">
+                      The PG will belong to this owner. We email them a link to set their password — use an email they can open.
+                      {isAgent && " The PG is connected to your agent code automatically."}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {[
+                      { field: "firstName", label: "First Name", type: "text", placeholder: "Suresh", autoComplete: "off" },
+                      { field: "lastName", label: "Last Name", type: "text", placeholder: "Nair", autoComplete: "off" },
+                      { field: "email", label: "Email", type: "email", placeholder: "owner@example.com", autoComplete: "off" },
+                      { field: "phone", label: "Phone", type: "tel", placeholder: "+91 9876543210", autoComplete: "off" },
+                    ].map((f) => (
+                      <div key={f.field}>
+                        <label htmlFor={`owner-${f.field}`} className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">{f.label}</label>
+                        <input
+                          id={`owner-${f.field}`}
+                          type={f.type}
+                          placeholder={f.placeholder}
+                          autoComplete={f.autoComplete}
+                          value={owner[f.field]}
+                          onChange={(e) => updateOwner(f.field, e.target.value)}
+                          required
+                          className="w-full bg-[var(--pg-bg)] border border-transparent focus:border-blue-400 focus:bg-white dark:focus:bg-slate-700 focus:ring-2 focus:ring-blue-50 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] placeholder-slate-400 outline-none transition-all"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
 
               <section className="space-y-4">
@@ -666,7 +788,8 @@ function ListPropertyForm() {
                 </div>
               </section>
 
-              {/* Agent section */}
+              {/* Agent section — not shown to an agent, whose PGs connect to them automatically */}
+              {!isAgent && (
               <section className="space-y-4">
                 <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)]">Onboarding Agent (Optional)</h3>
                 <div className="bg-[var(--pg-bg)] border border-blue-100 rounded-xl p-4">
@@ -685,6 +808,7 @@ function ListPropertyForm() {
                   </div>
                 </div>
               </section>
+              )}
 
               {/* Repeated by the button: the top-of-form copy is off-screen when owners submit. */}
               {submitError && (
@@ -700,7 +824,7 @@ function ListPropertyForm() {
                 </div>
               )}
 
-              {submitted && (
+              {submitted && !onboarding && (
                 <div role="status" className="bg-green-50 border border-green-200 text-green-800 text-sm font-medium px-4 py-3 rounded-xl">
                   Your PG has been submitted and is waiting for admin approval. Taking you to its status page…
                 </div>
@@ -708,7 +832,7 @@ function ListPropertyForm() {
 
               <div className="flex items-center justify-between gap-4 rounded-xl bg-[var(--pg-bg)] border border-[var(--pg-border)] px-4 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-[var(--pg-text)]">Ready to list your property?</p>
+                  <p className="text-sm font-semibold text-[var(--pg-text)]">{onboarding ? "Ready to onboard this PG?" : "Ready to list your property?"}</p>
                   <p className="text-xs text-[var(--pg-text-tertiary)] mt-0.5">Your listing will be reviewed by the team before going live. Usually takes 1-2 business days.</p>
                 </div>
                 <button

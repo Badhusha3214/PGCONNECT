@@ -412,10 +412,11 @@ function SearchResultsContent() {
         {/* ── SEARCH BAR ── */}
         <div id="main-content">
           <div className="max-w-[1280px] mx-auto px-4 sm:px-6 pt-8">
-            <div className="flex items-stretch gap-2 overflow-x-auto no-scrollbar bg-white rounded-[28px] p-2.5" style={{ boxShadow: "var(--pg-shadow-float)" }}>
+            {/* Wraps onto several rows on phones instead of scrolling sideways. */}
+            <div className="flex flex-wrap lg:flex-nowrap items-stretch gap-2 bg-white rounded-[28px] p-2.5" style={{ boxShadow: "var(--pg-shadow-float)" }}>
 
               {/* Location + Near Me */}
-              <div className="relative flex-1 min-w-[220px]">
+              <div className="relative basis-full lg:basis-auto flex-1 min-w-0 lg:min-w-[220px] min-h-[48px]">
                 <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
@@ -433,18 +434,18 @@ function SearchResultsContent() {
               </div>
 
               {/* Move-in date */}
-              <label className="shrink-0 h-full flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-blue-300 transition-colors cursor-pointer">
-                <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <label className="flex-[1_1_160px] lg:flex-none flex items-center gap-2 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap hover:border-blue-300 transition-colors cursor-pointer">
+                <svg className="w-4 h-4 shrink-0 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span className="text-xs text-slate-500">Move-in</span>
+                <span className="hidden sm:inline text-xs text-slate-500">Move-in</span>
                 <input type="date" value={moveIn} min={today} aria-label="Move-in date"
                   onChange={(e) => setMoveIn(e.target.value || today)}
-                  className="bg-transparent outline-none text-sm font-semibold cursor-pointer" style={{ color: "var(--pg-text)" }} />
+                  className="min-w-0 w-full bg-transparent outline-none text-sm font-semibold cursor-pointer" style={{ color: "var(--pg-text)" }} />
               </label>
 
               {/* Beds needed */}
-              <div className="shrink-0 h-full flex items-center gap-3 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+              <div className="shrink-0 flex items-center gap-2 sm:gap-3 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">Beds</span>
                 <button onClick={() => setBedsNeeded((b) => Math.max(1, b - 1))} aria-label="Fewer beds" className="relative w-7 h-7 rounded-full border flex items-center justify-center text-sm font-bold cursor-pointer before:content-[''] before:absolute before:-inset-2" style={{ borderColor: "var(--pg-border)", color: "var(--pg-primary)" }}>−</button>
                 <span className="text-sm font-bold w-4 text-center" aria-live="polite">{bedsNeeded}</span>
@@ -453,7 +454,7 @@ function SearchResultsContent() {
 
               {/* Search */}
               <button onClick={() => setPage(1)}
-                className="btn-shine shrink-0 flex items-center gap-2 text-white font-bold text-[15px] px-6 min-h-[48px] rounded-full cursor-pointer" style={{ background: "var(--pg-terracotta)", boxShadow: "0 12px 28px -10px rgba(180,70,31,.7)" }}>
+                className="btn-shine flex-1 lg:flex-none justify-center flex items-center gap-2 text-white font-bold text-[15px] px-6 min-h-[48px] rounded-full cursor-pointer" style={{ background: "var(--pg-terracotta)", boxShadow: "0 12px 28px -10px rgba(180,70,31,.7)" }}>
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>

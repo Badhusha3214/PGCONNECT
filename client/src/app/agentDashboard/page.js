@@ -215,9 +215,17 @@ export default function AgentDashboard() {
             {/* OVERVIEW */}
             {activeNav === "Overview" && (
               <>
-                <div className="mb-7">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Agent Overview</h1>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track the PGs connected to your code and your commission earnings.</p>
+                <div className="mb-7 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">Agent Overview</h1>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track the PGs connected to your code and your commission earnings.</p>
+                  </div>
+                  {isVerified && (
+                    <button onClick={() => router.push("/listProperty")}
+                      className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-all cursor-pointer">
+                      + Onboard a PG
+                    </button>
+                  )}
                 </div>
 
                 {/* Stat cards */}
@@ -278,11 +286,19 @@ export default function AgentDashboard() {
                     <div className="px-6 py-12 text-center">
                       <p className="text-3xl mb-3">🏠</p>
                       <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">No PGs connected yet</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Share your agent code with PG owners to get started.</p>
-                      <button onClick={() => setActiveNav("Agent Code")}
-                        className="mt-4 text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">
-                        Get Your Agent Code →
-                      </button>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Onboard a PG for its owner, or share your agent code with owners who list it themselves.</p>
+                      <div className="mt-4 flex items-center justify-center gap-4">
+                        {isVerified && (
+                          <button onClick={() => router.push("/listProperty")}
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">
+                            Onboard a PG →
+                          </button>
+                        )}
+                        <button onClick={() => setActiveNav("Agent Code")}
+                          className="text-sm font-semibold text-blue-600 hover:text-blue-700 cursor-pointer">
+                          Get Your Agent Code →
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">

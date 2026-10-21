@@ -42,7 +42,7 @@ export default function IntroLoader() {
         <div className="ld-msgs display font-bold tracking-[-0.02em]" style={{ fontSize: "clamp(20px, 3vw, 28px)" }}>
           <span className="ld-m1">Drawing the floor plan…</span>
           <span className="ld-m2">Checking which beds are free…</span>
-          <span className="ld-m3">Found yours. <span className="ml font-bold" style={{ color: "#FFC447" }} lang="ml">നിങ്ങളുടെ കിടക്ക</span></span>
+          <span className="ld-m3">Find your PG.</span>
         </div>
         <div className="flex items-center gap-3.5">
           <div className="ld-bar"><span /></div>

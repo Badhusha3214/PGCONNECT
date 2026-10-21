@@ -432,7 +432,8 @@ export function FinalCta() {
     <section className="px-4 sm:px-6 pb-24">
       <div className="reveal max-w-[1280px] mx-auto rounded-[44px] relative overflow-hidden flex flex-col items-start gap-7" style={{ background: "#10231F", color: "#F5F3EE", padding: "clamp(40px, 7vw, 104px) clamp(24px, 6vw, 88px)" }}>
         <div aria-hidden="true" className="absolute pointer-events-none rounded-[30px]" style={{ inset: 18, borderTop: "2px solid rgba(201,154,46,.55)", borderBottom: "1px solid rgba(201,154,46,.55)" }} />
-        <div aria-hidden="true" className="absolute flex gap-3.5 opacity-90" style={{ right: "clamp(-40px, 2vw, 60px)", bottom: 40 }}>
+        {/* Decorative beds: hidden on phones, where they'd sit on top of the buttons. */}
+        <div aria-hidden="true" className="absolute hidden md:flex gap-3.5 opacity-90" style={{ right: "clamp(-40px, 2vw, 60px)", bottom: 40 }}>
           {["s1", "s2", "s3"].map((s) => <span key={s} className={`seq ${s} w-[54px] h-[120px] rounded-xl`} style={{ border: "1.5px solid rgba(255,255,255,.2)" }} />)}
         </div>
         <h2 className="display m-0 font-extrabold relative max-w-[820px]" style={{ fontSize: "clamp(44px, 6.4vw, 96px)", lineHeight: 0.95, letterSpacing: "-0.045em" }}>

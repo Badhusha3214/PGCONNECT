@@ -39,9 +39,9 @@ export default function Referral() {
   };
 
   const step = (bg, icon, label, extra = "") => (
-    <div className="flex flex-col items-center gap-2 text-center flex-none w-[88px]">
-      <span className={`w-14 h-14 rounded-[18px] grid place-items-center ${extra}`} style={{ background: bg }}>{icon}</span>
-      <span className="text-[13px] font-bold">{label}</span>
+    <div className="flex flex-col items-center gap-2 text-center flex-[0_1_88px] min-w-0">
+      <span className={`w-12 h-12 sm:w-14 sm:h-14 shrink-0 rounded-[16px] sm:rounded-[18px] grid place-items-center ${extra}`} style={{ background: bg }}>{icon}</span>
+      <span className="text-[12px] sm:text-[13px] font-bold leading-tight">{label}</span>
     </div>
   );
 
@@ -60,7 +60,7 @@ export default function Referral() {
             </Link>
           </div>
         </div>
-        <div className="rounded-[32px] p-[26px] flex flex-col gap-6" style={{ background: "#F5F3EE" }}>
+        <div className="rounded-[32px] p-5 sm:p-[26px] flex flex-col gap-6 min-w-0" style={{ background: "#F5F3EE" }}>
           <div className="flex flex-col gap-2.5">
             <label htmlFor="reflink" className="text-[13px] font-bold tracking-[.08em] uppercase" style={{ color: "#5B6762" }}>Your referral link</label>
             <div className="flex gap-2 bg-white rounded-[18px] py-1.5 pr-1.5 pl-4 items-center">
@@ -77,7 +77,7 @@ export default function Referral() {
               </button>
             </div>
           </div>
-          <div aria-label="How referral earnings flow" role="img" className="flex items-center gap-2.5">
+          <div aria-label="How referral earnings flow" role="img" className="flex items-center justify-between gap-1.5 sm:gap-2.5">
             {step("#10231F", <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>, "You share")}
             <div className="flow" aria-hidden="true"><span /></div>
             {step("#B4461F", <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" /><path d="M9 21v-6h6v6" /></svg>, "Owner lists")}

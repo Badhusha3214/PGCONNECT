@@ -32,6 +32,10 @@ Supabase Dashboard → **Authentication → Emails → Templates**
 |---|---|---|
 | Confirm signup | `Confirm your email for PGCON` | [`confirm-signup.html`](confirm-signup.html) |
 | Reset Password | `Reset your PGCON password` | [`reset-password.html`](reset-password.html) |
+| Invite user | `Your PG is on PGCON — set your password` | [`invite-owner.html`](invite-owner.html) |
+
+The invite is sent when an agent or admin onboards a PG for a new owner. It
+also lands on `/reset-password`, which shows "Set your password" copy for it.
 
 The button uses `token_hash`, so the link works even when the email is opened
 on a different phone or laptop from the one that requested it.

@@ -297,11 +297,11 @@ propertiesRouter.get('/:id', async (c, next) => {
   return c.json({ success: true, property })
 })
 
-// POST /api/properties — owner creates listing
-propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async (c) => {
-  const user = c.get('user')
-  const supabase = getSupabase(c.env)
+type ListingInput = { body: Record<string, unknown>; imageFiles: File[]; rooms: RoomInput[]; amenities: string[] }
 
+// Reads and checks a new listing from the request. Nothing is created here, so
+// callers can bail out (or create the owner's account) before anything is saved.
+const readListing = async (c: Ctx): Promise<{ input: ListingInput } | { error: Response }> => {
   const contentType = c.req.header('content-type') ?? ''
   let body: Record<string, unknown>
   let imageFiles: File[] = []
@@ -325,6 +325,11 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
       referral_code: formData.get('referral_code'),
       agent_code: formData.get('agent_code'),
       commission_option: formData.get('commission_option'),
+      // Only read by POST /onboard.
+      owner_first_name: formData.get('owner_first_name'),
+      owner_last_name: formData.get('owner_last_name'),
+      owner_email: formData.get('owner_email'),
+      owner_phone: formData.get('owner_phone'),
     }
     imageFiles = (formData.getAll('images') as unknown[]).filter((f): f is File => f instanceof File)
   } else {
@@ -332,10 +337,34 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   }
 
   if (!body.name || !body.address || !body.city || !body.state) {
-    return c.json({ success: false, message: 'name, address, city, and state are required' }, 400)
+    return { error: c.json({ success: false, message: 'name, address, city, and state are required' }, 400) }
   }
   const photoError = photoProblem(imageFiles)
-  if (photoError) return c.json({ success: false, message: photoError }, 400)
+  if (photoError) return { error: c.json({ success: false, message: photoError }, 400) }
+
+  const amenities = typeof body.amenities === 'string'
+    ? body.amenities.split(',').map((a: string) => a.trim()).filter(Boolean)
+    : (body.amenities as string[] | undefined) ?? []
+
+  let rooms: RoomInput[]
+  try {
+    rooms = typeof body.rooms === 'string' ? JSON.parse(body.rooms as string) : (body.rooms as RoomInput[]) ?? []
+  } catch {
+    return { error: c.json({ success: false, message: 'Room details could not be read' }, 400) }
+  }
+  // Check rooms before creating anything, so a bad room never leaves behind a
+  // half-made property (which owners then re-submit, creating duplicates).
+  const roomError = roomProblem(rooms)
+  if (roomError) return { error: c.json({ success: false, message: roomError }, 400) }
+
+  return { input: { body, imageFiles, rooms, amenities } }
+}
+
+// Saves a checked listing for `ownerId`. `agentId` connects it to an agent
+// directly (an agent onboarding the owner); otherwise the agent code is used.
+const createListing = async (c: Ctx, ownerId: string, input: ListingInput, agentId?: string) => {
+  const supabase = getSupabase(c.env)
+  const { body, imageFiles, rooms, amenities } = input
 
   // Resolve referral code to referrer UUID
   let referredBy: string | null = null
@@ -350,8 +379,8 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   }
 
   // Resolve agent code to a verified agent UUID — unverified/invalid codes are silently ignored
-  let agentId: string | null = null
-  if (body.agent_code) {
+  let resolvedAgentId: string | null = agentId ?? null
+  if (!resolvedAgentId && body.agent_code) {
     const { data: agent } = await supabase
       .from('profiles')
       .select('id')
@@ -359,23 +388,8 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
       .eq('role', 'agent')
       .eq('is_verified_agent', true)
       .single()
-    agentId = agent?.id ?? null
+    resolvedAgentId = agent?.id ?? null
   }
-
-  const amenities = typeof body.amenities === 'string'
-    ? body.amenities.split(',').map((a: string) => a.trim()).filter(Boolean)
-    : (body.amenities as string[] | undefined) ?? []
-
-  let rooms: RoomInput[]
-  try {
-    rooms = typeof body.rooms === 'string' ? JSON.parse(body.rooms as string) : (body.rooms as RoomInput[]) ?? []
-  } catch {
-    return c.json({ success: false, message: 'Room details could not be read' }, 400)
-  }
-  // Check rooms before creating anything, so a bad room never leaves behind a
-  // half-made property (which owners then re-submit, creating duplicates).
-  const roomError = roomProblem(rooms)
-  if (roomError) return c.json({ success: false, message: roomError }, 400)
 
   // Same owner + same PG name + same city already pending or live means this is
   // a re-submission (double click, back button, retry) — don't create a copy.
@@ -383,7 +397,7 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   const { data: existing } = await supabase
     .from('properties')
     .select('id, status')
-    .eq('owner_id', user.id)
+    .eq('owner_id', ownerId)
     .ilike('name', escapedName)
     .eq('city', normalizeCity(body.city as string))
     .in('status', ['pending', 'verified'])
@@ -408,9 +422,9 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   const { data: property, error } = await supabase
     .from('properties')
     .insert({
-      owner_id: user.id,
+      owner_id: ownerId,
       referred_by: referredBy,
-      agent_id: agentId,
+      agent_id: resolvedAgentId,
       name: body.name,
       tagline: body.tagline,
       address: body.address,
@@ -474,6 +488,98 @@ propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async 
   }
 
   return c.json({ success: true, message: 'Property submitted for review', property }, 201)
+}
+
+// POST /api/properties — owner creates listing
+propertiesRouter.post('/', authMiddleware, requireRole('owner', 'admin'), async (c) => {
+  const read = await readListing(c)
+  if ('error' in read) return read.error
+  return createListing(c, c.get('user').id, read.input)
+})
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// POST /api/properties/onboard — an agent or admin lists a PG for an owner who
+// isn't on PGCON yet. Creates the owner's account (emailing them a link to set
+// their password) and the listing, owned by them, in one go. Same multipart
+// form as POST /, plus owner_first_name, owner_last_name, owner_email, owner_phone.
+propertiesRouter.post('/onboard', authMiddleware, requireRole('agent', 'admin'), async (c) => {
+  const user = c.get('user')
+  if (user.role === 'agent' && !user.is_verified_agent) {
+    return c.json({ success: false, message: 'PGCON has to approve your agent account before you can onboard PGs.' }, 403)
+  }
+
+  const read = await readListing(c)
+  if ('error' in read) return read.error
+  const { body } = read.input
+
+  const field = (key: string) => (typeof body[key] === 'string' ? (body[key] as string).trim() : '')
+  const firstName = field('owner_first_name')
+  const lastName = field('owner_last_name')
+  const email = field('owner_email').toLowerCase()
+  const phone = field('owner_phone')
+  if (!firstName || !lastName || !phone || !EMAIL_RE.test(email)) {
+    return c.json({ success: false, message: "Enter the owner's first name, last name, phone and a valid email" }, 400)
+  }
+
+  // The invite creates the account and emails the owner a link to set their
+  // password. It refuses emails that already have an account — those owners
+  // list from their own dashboard (and can enter the agent's code there).
+  const supabase = getSupabase(c.env)
+  const clientUrl = (c.env.CLIENT_URL || 'https://www.pgcon.in').replace(/\/+$/, '')
+  const { data: invited, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${clientUrl}/reset-password?invited=1`,
+    data: { first_name: firstName, last_name: lastName },
+  })
+  if (inviteError || !invited.user) {
+    if (inviteError && /already|exists|registered/i.test(inviteError.message)) {
+      return c.json({
+        success: false,
+        code: 'email_exists',
+        message: 'This email already has a PGCON account. Ask the owner to sign in and list the PG from their dashboard' +
+          (user.role === 'agent' ? ' — they can enter your agent code there.' : '.'),
+      }, 409)
+    }
+    if (inviteError && /rate|seconds|too many/i.test(inviteError.message)) {
+      return c.json({ success: false, message: "Too many invite emails were sent just now. Wait a minute and try again." }, 429)
+    }
+    console.error('[properties/onboard] invite failed:', inviteError?.message)
+    return c.json({ success: false, message: "Couldn't create the owner's account. Please try again." }, 500)
+  }
+  const ownerId = invited.user.id
+
+  const removeOwner = async () => {
+    await supabase.from('profiles').delete().eq('id', ownerId)
+    await supabase.auth.admin.deleteUser(ownerId)
+  }
+
+  const { error: profileError } = await supabase.from('profiles').insert({
+    id: ownerId,
+    first_name: firstName,
+    last_name: lastName,
+    role: 'owner',
+    phone,
+  })
+  if (profileError) {
+    await removeOwner()
+    console.error('[properties/onboard] profile insert failed:', profileError.message)
+    return c.json({ success: false, message: "Couldn't create the owner's account. Please try again." }, 500)
+  }
+
+  const res = await createListing(c, ownerId, read.input, user.role === 'agent' ? user.id : undefined)
+  // No listing means no reason for the account: remove it so the form can
+  // simply be submitted again with the same email.
+  if (!res.ok) {
+    await removeOwner()
+    return res
+  }
+  const created = (await res.json()) as { property: unknown }
+  return c.json({
+    success: true,
+    message: `${firstName}'s account is created and the PG is submitted for review. We've emailed ${email} a link to set their password.`,
+    owner: { id: ownerId, email, first_name: firstName, last_name: lastName },
+    property: created.property,
+  }, 201)
 })
 
 // POST /api/properties/:id/images — owner adds photos to an existing listing

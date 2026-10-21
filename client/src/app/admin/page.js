@@ -908,6 +908,12 @@ export default function AdminPanel() {
                       <p className="text-xs mt-0.5" style={{ color: "var(--pg-text-secondary)" }}>How many people have viewed and liked each listing.</p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => router.push("/listProperty")}
+                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-3 py-1.5 text-sm font-semibold cursor-pointer whitespace-nowrap"
+                      >
+                        + Onboard a PG
+                      </button>
                       <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Sort by</span>
                       <select
                         value={propertiesSort}

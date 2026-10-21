@@ -137,6 +137,11 @@ export const createProperty = async (formData) => {
   return authFetchForm('/api/properties', formData)
 }
 
+// Agent/admin: create a new owner's account and their PG in one go.
+export const onboardProperty = async (formData) => {
+  return authFetchForm('/api/properties/onboard', formData)
+}
+
 export const updateProperty = async (propertyId, data) => {
   return authFetch(`/api/properties/${propertyId}`, { method: 'PATCH', body: JSON.stringify(data) })
 }
