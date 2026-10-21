@@ -1,9 +1,12 @@
 // Intro loader from the design: a floor plan draws itself, beds pop in and one
-// lights up, then the panels split open. Pure CSS (globals.css .ld-*); it is
-// skipped after the first visit in a session via html[data-intro="seen"],
-// which INTRO_SEEN_SCRIPT sets before first paint (see app/page.js).
+// lights up, then the panels split open. Pure CSS (globals.css .ld-*). It plays
+// only on a visitor's very first load: INTRO_SEEN_SCRIPT (see app/page.js)
+// sets html[data-intro="seen"] before first paint on later loads, and also once
+// the first play ends, so coming back to "/" via a link in the same visit
+// doesn't replay it either. localStorage, not sessionStorage, because in-app
+// browsers (Instagram etc.) start a fresh session on every open.
 
-export const INTRO_SEEN_SCRIPT = `try{var k='pg-intro-seen';if(sessionStorage.getItem(k)){document.documentElement.setAttribute('data-intro','seen')}else{sessionStorage.setItem(k,'1')}}catch(e){}`;
+export const INTRO_SEEN_SCRIPT = `try{var k='pg-intro-seen',h=document.documentElement;if(localStorage.getItem(k)){h.setAttribute('data-intro','seen')}else{localStorage.setItem(k,'1');setTimeout(function(){h.setAttribute('data-intro','seen')},3600)}}catch(e){}`;
 
 export default function IntroLoader() {
   return (
