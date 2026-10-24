@@ -53,8 +53,7 @@ function SignInForm() {
       // students/owners to the page they were trying to reach before signing in.
       if (role === "admin") { router.push("/admin"); return; }
       if (nextPath) { router.push(nextPath); return; }
-      // Students come here to find and pay for a bed, so land them on their
-      // bookings; referral earnings are one link away from there.
+      // Students come here to find and pay for a bed, so land them on their bookings.
       if (role === "student") { router.push("/payments"); }
       else if (role === "owner") { router.push("/ownersDashboard"); }
       else if (role === "agent") { router.push("/agentDashboard"); }

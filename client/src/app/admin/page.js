@@ -728,11 +728,10 @@ export default function AdminPanel() {
               {/* PAYMENTS TAB */}
               {activeNav === "Payments" && (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {[
                       { label: "Platform Revenue", value: paymentsSummary?.platform_revenue },
                       { label: "Owner Payouts", value: paymentsSummary?.owner_payouts },
-                      { label: "Referrer Commissions", value: paymentsSummary?.referrer_commissions },
                       { label: "Agent Commissions", value: paymentsSummary?.agent_commissions },
                     ].map((card) => (
                       <div key={card.label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border" style={{ borderColor: "var(--pg-border-soft)" }}>

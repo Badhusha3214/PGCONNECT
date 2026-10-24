@@ -145,8 +145,7 @@ export default function PaymentsPage() {
         <div id="main-content" className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-[var(--pg-text)] mb-2">My bookings &amp; payments</h1>
           <p className="text-sm text-[var(--pg-text-tertiary)] mb-8">
-            Track your booking requests, pay monthly rent and see your payment history.{" "}
-            <Link href="/referrerDashboard" className="font-semibold" style={{ color: "var(--pg-terracotta)" }}>Referral earnings →</Link>
+            Track your booking requests, pay monthly rent and see your payment history.
           </p>
 
           {notice && (

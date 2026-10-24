@@ -6,15 +6,13 @@ import Hero from "./home/Hero";
 // Hidden until built (planned after 350 live PGs; see "PG Connect" note in Obsidian):
 // import Features from "./home/Features";
 import FeaturedPGs from "./home/FeaturedPGs";
-import Referral from "./home/Referral";
 import { CityMarquee, Collections, HowItWorks, BrowseByCity, ForParents, ForOwners, Testimonials, Faq, FinalCta } from "./home/Sections";
 import { toPg, citiesFrom } from "./home/data";
 
 const DEFAULT_CITIES = ["Kochi", "Thiruvananthapuram", "Kozhikode", "Thrissur", "Kottayam"];
 
 // Landing page — "Landing page · 1440" design, reproduced section for section.
-// Listings, cities, city photos, reviews and the student's referral link are
-// live data (fetched in page.js / Referral.js).
+// Listings, cities, city photos and reviews are live data (fetched in page.js).
 export default function HomeClient({ initialProperties = [], stats = null, reviews = [] }) {
   const pgs = initialProperties.map(toPg);
   const live = citiesFrom(stats, pgs);
@@ -36,7 +34,6 @@ export default function HomeClient({ initialProperties = [], stats = null, revie
         <FeaturedPGs pgs={pgs} cities={cities} />
         <BrowseByCity cities={cities} pgs={pgs} />
         <ForParents />
-        <Referral />
         <ForOwners />
         <Testimonials reviews={reviews} />
         <Faq />

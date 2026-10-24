@@ -39,38 +39,31 @@ const SECTIONS = [
     ],
   },
   {
-    heading: "6. Referral Program",
-    body: [
-      "Students can earn commission by referring property owners to list on PGCON, using their unique referral code. Commission is calculated as a percentage of rent collected from bookings tied to that referral, and is either recurring (paid monthly) or one-time, depending on the option chosen at signup. Commissions are credited to your account balance and can be requested as a payout once the minimum threshold is met.",
-      "PGCON reserves the right to withhold or reverse commission in cases of fraud or abuse of the referral program.",
-    ],
-  },
-  {
-    heading: "7. Prohibited Conduct",
+    heading: "6. Prohibited Conduct",
     body: [
       "You may not post false or misleading listings, harass other users, attempt to bypass the platform's payment or verification systems, or use PGCON for any unlawful purpose.",
     ],
   },
   {
-    heading: "8. Limitation of Liability",
+    heading: "7. Limitation of Liability",
     body: [
       "PGCON facilitates connections between tenants and property owners but is not a party to the tenancy agreement itself. We verify listings to the best of our ability but do not guarantee the accuracy of every detail submitted by owners. Use your judgement and visit a property before committing.",
     ],
   },
   {
-    heading: "9. Termination",
+    heading: "8. Termination",
     body: [
       "We may suspend or terminate accounts that violate these terms. You may close your account at any time by contacting support.",
     ],
   },
   {
-    heading: "10. Changes to These Terms",
+    heading: "9. Changes to These Terms",
     body: [
       "We may update these terms from time to time. Continued use of PGCON after changes take effect constitutes acceptance of the revised terms.",
     ],
   },
   {
-    heading: "11. Contact",
+    heading: "10. Contact",
     body: [
       "Questions about these terms? Reach out via our Contact page.",
     ],

@@ -6,7 +6,6 @@ const PRIVATE_PATHS = [
   "/admin",
   "/agentDashboard",
   "/ownersDashboard",
-  "/referrerDashboard",
   "/payments",
   "/profile",
   "/listingPending",

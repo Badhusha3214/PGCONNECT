@@ -73,7 +73,7 @@ export default function Hero({ cities }) {
 
           {/* Echoes the heading's words and names the brand, so the H1 matches the page copy. */}
           <p className="hin i6 m-0 text-xl text-[var(--pg-text-secondary)] max-w-[520px]" style={{ lineHeight: 1.55, textWrap: "pretty" }}>
-            PGCON helps you find the perfect PG near your campus — Kerala&apos;s trusted PG marketplace for students, with verified listings, transparent pricing and a referral program that rewards your network.
+            PGCON helps you find the perfect PG near your campus — Kerala&apos;s trusted PG marketplace for students, with verified listings, real bed availability and transparent pricing.
           </p>
 
           <form id="search" onSubmit={onSearch} className="hin i7 bg-white rounded-[28px] p-2.5 flex flex-col gap-2" aria-label="Search PGs" style={{ boxShadow: "0 30px 70px -30px rgba(16,35,31,.35), 0 1px 0 rgba(16,35,31,.06)" }}>

@@ -3,7 +3,7 @@ import { FAQ_GROUPS } from "./faqs";
 
 export const metadata = pageMetadata({
   title: "Help Center — PG Booking & Listing FAQs",
-  description: "Answers to common questions about searching and booking PGs, contacting owners, listing your property, payments and referrals on PGCON.",
+  description: "Answers to common questions about searching and booking PGs, contacting owners, listing your property and payments on PGCON.",
   path: "/help",
 });
 

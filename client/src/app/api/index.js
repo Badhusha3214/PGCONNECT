@@ -112,8 +112,10 @@ export const logout = async () => {
   return { success: true }
 }
 
-export const getCurrentUser = async () => {
-  return authFetch('/api/auth/me')
+// `options` can carry a fetch `signal` (e.g. a timeout) for callers that
+// mustn't wait forever.
+export const getCurrentUser = async (options = {}) => {
+  return authFetch('/api/auth/me', options)
 }
 
 export const updatePassword = async ({ new_password }) => {
@@ -213,27 +215,6 @@ export const getOwnerInquiries = async () => {
 
 export const updateInquiryStatus = async (inquiryId, status) => {
   return authFetch(`/api/inquiries/${inquiryId}`, { method: 'PATCH', body: JSON.stringify({ status }) })
-}
-
-// ── REFERRAL ──────────────────────────────────────────────────────────────────
-export const getReferralCode = async () => {
-  return authFetch('/api/referral/my-code')
-}
-
-export const getReferralStats = async () => {
-  return authFetch('/api/referral/stats')
-}
-
-export const getReferralCommissions = async (page = 1) => {
-  return authFetch(`/api/referral/commissions?page=${page}`)
-}
-
-export const updateCommissionType = async (commission_type) => {
-  return authFetch('/api/referral/commission-type', { method: 'PATCH', body: JSON.stringify({ commission_type }) })
-}
-
-export const requestPayout = async () => {
-  return authFetch('/api/referral/request-payout', { method: 'POST' })
 }
 
 // ── AGENT ─────────────────────────────────────────────────────────────────────

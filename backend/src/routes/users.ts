@@ -11,7 +11,7 @@ usersRouter.patch('/profile', authMiddleware, async (c) => {
   const supabase = getSupabase(c.env)
   const body = await c.req.json()
 
-  const allowed = ['first_name', 'last_name', 'phone', 'university', 'avatar', 'commission_type']
+  const allowed = ['first_name', 'last_name', 'phone', 'university', 'avatar']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key]

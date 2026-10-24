@@ -63,7 +63,6 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
     }, 200)
   }
 
-  const referral_code = role === 'student' ? generateReferralCode() : null
   const agent_code = role === 'agent' ? generateReferralCode() : null
 
   const { error: profileError } = await supabase.from('profiles').insert({
@@ -73,7 +72,6 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
     role,
     phone,
     university,
-    referral_code,
     agent_code,
   })
 
@@ -90,7 +88,7 @@ authRouter.post('/register', zValidator('json', registerSchema), async (c) => {
     message: needsConfirmation
       ? 'Registration successful. Please check your email to confirm your account.'
       : 'Registration successful.',
-    user: { id: data.user.id, email, first_name, last_name, role, referral_code, agent_code },
+    user: { id: data.user.id, email, first_name, last_name, role, agent_code },
     token: data.session?.access_token,
   }, 201)
 })

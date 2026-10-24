@@ -16,7 +16,7 @@ paymentsRouter.post('/create-order', authMiddleware, requireRole('student'), asy
 
   const { data: booking } = await supabase
     .from('bookings')
-    .select('*, properties(id, name, referred_by, commission_option)')
+    .select('*, properties(id, name)')
     .eq('id', booking_id)
     .eq('tenant_id', user.id)
     .single()
@@ -89,7 +89,7 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
 
   const { data: payment } = await supabase
     .from('payments')
-    .select('*, bookings(monthly_rent, property_id, bed_id, room_type, properties(referred_by, commission_option))')
+    .select('*, bookings(monthly_rent, property_id, bed_id, room_type)')
     .eq('id', payment_id)
     .eq('tenant_id', user.id)
     .single()
@@ -98,27 +98,19 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
 
   const rent = payment.amount as number
   const platformFee = rent * 0.05
-  const referrerCommission = rent * 0.02
   const ownerPayout = rent * 0.95
 
-  const bookingInfo = payment.bookings as {
-    property_id: string; bed_id: string | null; room_type: string
-    properties: { referred_by: string | null; commission_option: string }
-  }
-  const property = bookingInfo?.properties
-  const referredBy = property?.referred_by ?? null
-  const commissionOption = property?.commission_option ?? 'recurring'
-  // Agents are paid only the one-time verification bounty, never a cut of rent.
-  const agentCommission = 0
-  const platformRevenue = platformFee - referrerCommission
+  const bookingInfo = payment.bookings as { property_id: string; bed_id: string | null; room_type: string }
+  // Nobody earns a cut of rent: there is no referral commission, and agents
+  // are paid only the one-time verification bounty. The whole fee is PGCON's.
 
   await supabase.from('payments').update({
     razorpay_payment_id,
     status: 'paid',
     platform_fee: platformFee,
-    referrer_commission: referrerCommission,
-    agent_commission: agentCommission,
-    platform_revenue: platformRevenue,
+    referrer_commission: 0,
+    agent_commission: 0,
+    platform_revenue: platformFee,
     owner_payout: ownerPayout,
   }).eq('id', payment_id)
 
@@ -151,59 +143,6 @@ paymentsRouter.post('/verify', authMiddleware, requireRole('student'), async (c)
       const flag = '[AUTO-FLAG: bed conflict at payment verification — needs manual admin reassignment]'
       await supabase.from('bookings').update({ notes: [currentBooking?.notes, flag].filter(Boolean).join(' ') }).eq('id', payment.booking_id)
     }
-  }
-
-  const creditCommission = async (opts: {
-    earnerId: string
-    role: 'referrer'
-    amount: number
-    type: 'recurring' | 'one-time'
-    onlyIfNotAlreadyPaid: boolean
-  }) => {
-    if (opts.onlyIfNotAlreadyPaid) {
-      const { count } = await supabase
-        .from('commissions')
-        .select('id', { count: 'exact' })
-        .eq('referrer_id', opts.earnerId)
-        .eq('property_id', payment.property_id)
-        .eq('role', opts.role)
-        .eq('status', 'paid')
-      if ((count ?? 0) > 0) return
-    }
-
-    await supabase.from('commissions').insert({
-      referrer_id: opts.earnerId,
-      property_id: payment.property_id,
-      payment_id,
-      amount: opts.amount,
-      type: opts.type,
-      role: opts.role,
-      status: 'pending',
-      month: payment.month,
-    })
-
-    const { data: earnerProfile } = await supabase
-      .from('profiles')
-      .select('commission_balance, total_commission_earned')
-      .eq('id', opts.earnerId)
-      .single()
-
-    if (earnerProfile) {
-      await supabase.from('profiles').update({
-        commission_balance: (earnerProfile.commission_balance ?? 0) + opts.amount,
-        total_commission_earned: (earnerProfile.total_commission_earned ?? 0) + opts.amount,
-      }).eq('id', opts.earnerId)
-    }
-  }
-
-  if (referredBy) {
-    await creditCommission({
-      earnerId: referredBy,
-      role: 'referrer',
-      amount: referrerCommission,
-      type: commissionOption as 'recurring' | 'one-time',
-      onlyIfNotAlreadyPaid: commissionOption === 'one-time',
-    })
   }
 
   return c.json({ success: true, message: 'Payment verified and recorded', owner_payout: ownerPayout })

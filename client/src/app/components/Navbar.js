@@ -9,11 +9,13 @@ import Logo from "./Logo";
 import { useDismissableOverlay } from "../../lib/useDismissableOverlay";
 
 const DASHBOARD_PATH = {
-  student: "/referrerDashboard",
+  student: "/payments",
   owner: "/ownersDashboard",
   agent: "/agentDashboard",
   admin: "/admin",
 };
+
+const NAV_USER_KEY = "pg-nav-user";
 
 const NAV_LINKS = [
   { label: "Find a PG", href: "/propertys" },
@@ -37,17 +39,41 @@ export default function Navbar() {
   useEffect(() => {
     let mounted = true;
 
-    const loadUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        if (mounted) { setUser(null); setCheckingAuth(false); }
-        return;
-      }
+    // Last signed-in user, so the avatar shows instantly instead of the corner
+    // sitting empty while the session is checked.
+    try {
+      const cached = JSON.parse(localStorage.getItem(NAV_USER_KEY) || "null");
+      if (cached) { setUser(cached); setCheckingAuth(false); }
+    } catch { /* storage blocked — just wait for the check */ }
+
+    const remember = (u) => {
       try {
-        const res = await getCurrentUser();
+        if (u) localStorage.setItem(NAV_USER_KEY, JSON.stringify({ first_name: u.first_name, last_name: u.last_name, role: u.role }));
+        else localStorage.removeItem(NAV_USER_KEY);
+      } catch { /* ignore */ }
+    };
+
+    // `known` is the session handed to onAuthStateChange; otherwise ask for it.
+    // Always ends with checkingAuth false, so Log in / the avatar can never
+    // stay hidden because a step threw or hung.
+    const loadUser = async (known) => {
+      try {
+        const session = known !== undefined ? known : (await supabase.auth.getSession()).data.session;
+        if (!session) {
+          if (mounted) setUser(null);
+          remember(null);
+          return;
+        }
+        const res = await getCurrentUser({ signal: AbortSignal.timeout(8000) });
         if (mounted) setUser(res?.user || null);
-      } catch {
-        if (mounted) setUser(null);
+        remember(res?.user || null);
+      } catch (err) {
+        // Only a definite "not signed in" clears the user; a slow or failed
+        // request keeps whoever was shown.
+        if (err?.status === 401 || err?.status === 403) {
+          if (mounted) setUser(null);
+          remember(null);
+        }
       } finally {
         if (mounted) setCheckingAuth(false);
       }
@@ -55,7 +81,13 @@ export default function Navbar() {
 
     loadUser();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange(() => loadUser());
+    // Supabase holds its auth lock while this callback runs, and calling it
+    // again from inside (getSession, or the token lookup in getCurrentUser)
+    // deadlocks — the navbar then never finishes checking. Defer the work.
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return; // loadUser() above covers it
+      setTimeout(() => loadUser(session), 0);
+    });
     return () => { mounted = false; subscription?.subscription?.unsubscribe(); };
   }, []);
 
@@ -65,6 +97,7 @@ export default function Navbar() {
 
   const handleSignOut = async () => {
     await logout();
+    try { localStorage.removeItem(NAV_USER_KEY); } catch { /* ignore */ }
     setUser(null);
     setUserMenuOpen(false);
     router.push("/");
@@ -145,10 +178,7 @@ export default function Navbar() {
                         {user.first_name} {user.last_name}
                       </p>
                       {user.role === "student" ? (
-                        <>
-                          <button onClick={goToPayments} className={menuItem}>My bookings & payments</button>
-                          <button onClick={goToDashboard} className={menuItem}>Referral program</button>
-                        </>
+                        <button onClick={goToPayments} className={menuItem}>My bookings & payments</button>
                       ) : (
                         <button onClick={goToDashboard} className={menuItem}>Dashboard</button>
                       )}
@@ -199,10 +229,7 @@ export default function Navbar() {
               {!checkingAuth && user ? (
                 <>
                   {user.role === "student" ? (
-                    <>
-                      <button onClick={() => { goToPayments(); setMenuOpen(false); }} className="py-2.5 text-left text-base font-semibold text-[var(--pg-ink)] cursor-pointer">My bookings & payments</button>
-                      <button onClick={() => { goToDashboard(); setMenuOpen(false); }} className="py-2.5 text-left text-base font-semibold text-[var(--pg-ink)] cursor-pointer">Referral program</button>
-                    </>
+                    <button onClick={() => { goToPayments(); setMenuOpen(false); }} className="py-2.5 text-left text-base font-semibold text-[var(--pg-ink)] cursor-pointer">My bookings & payments</button>
                   ) : (
                     <button onClick={() => { goToDashboard(); setMenuOpen(false); }} className="py-2.5 text-left text-base font-semibold text-[var(--pg-ink)] cursor-pointer">Dashboard</button>
                   )}

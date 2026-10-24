@@ -322,9 +322,7 @@ const readListing = async (c: Ctx): Promise<{ input: ListingInput } | { error: R
       rooms: formData.get('rooms'),
       manager_name: formData.get('manager_name'),
       manager_phone: formData.get('manager_phone'),
-      referral_code: formData.get('referral_code'),
       agent_code: formData.get('agent_code'),
-      commission_option: formData.get('commission_option'),
       // Only read by POST /onboard.
       owner_first_name: formData.get('owner_first_name'),
       owner_last_name: formData.get('owner_last_name'),
@@ -365,18 +363,6 @@ const readListing = async (c: Ctx): Promise<{ input: ListingInput } | { error: R
 const createListing = async (c: Ctx, ownerId: string, input: ListingInput, agentId?: string) => {
   const supabase = getSupabase(c.env)
   const { body, imageFiles, rooms, amenities } = input
-
-  // Resolve referral code to referrer UUID
-  let referredBy: string | null = null
-  if (body.referral_code) {
-    const { data: referrer } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('referral_code', body.referral_code)
-      .eq('role', 'student')
-      .single()
-    referredBy = referrer?.id ?? null
-  }
 
   // Resolve agent code to a verified agent UUID — unverified/invalid codes are silently ignored
   let resolvedAgentId: string | null = agentId ?? null
@@ -423,7 +409,6 @@ const createListing = async (c: Ctx, ownerId: string, input: ListingInput, agent
     .from('properties')
     .insert({
       owner_id: ownerId,
-      referred_by: referredBy,
       agent_id: resolvedAgentId,
       name: body.name,
       tagline: body.tagline,
@@ -438,7 +423,6 @@ const createListing = async (c: Ctx, ownerId: string, input: ListingInput, agent
       starting_price: startingPrice,
       manager_name: body.manager_name,
       manager_phone: body.manager_phone,
-      commission_option: body.commission_option ?? 'recurring',
     })
     .select()
     .single()

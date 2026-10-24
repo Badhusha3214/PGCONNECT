@@ -2,7 +2,7 @@ import { pageMetadata } from "../../lib/site";
 
 export const metadata = pageMetadata({
   title: "How It Works — Finding and Listing PGs",
-  description: "How PGCON works for students, working professionals and PG owners: verified listings, online booking, rent payments, pricing and the referral program.",
+  description: "How PGCON works for students, working professionals and PG owners: verified listings, online booking, rent payments and pricing.",
   path: "/how-it-works",
 });
 

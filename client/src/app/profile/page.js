@@ -4,7 +4,7 @@ import Footer from "../components/Footer";
 import PageHero from "../components/PageHero";
 
 const PLACES = [
-  { title: "Students", text: "Bookings, rent payments and your referral earnings.", href: "/referrerDashboard", cta: "Student dashboard", bg: "#0F3B33", fg: "#F5F3EE", btn: "#FFC447", btnFg: "#2A1C00" },
+  { title: "Students", text: "Your bookings and rent payments.", href: "/payments", cta: "Student dashboard", bg: "#0F3B33", fg: "#F5F3EE", btn: "#FFC447", btnFg: "#2A1C00" },
   { title: "PG owners", text: "Listings, bed availability, enquiries, KYC and payouts.", href: "/ownersDashboard", cta: "Owner dashboard", bg: "#B4461F", fg: "#FFFFFF", btn: "#FFFFFF", btnFg: "#8E3415" },
   { title: "Agents", text: "Properties you've onboarded and your commissions.", href: "/agentDashboard", cta: "Agent dashboard", bg: "#FFFFFF", fg: "#10231F", btn: "#10231F", btnFg: "#FFFFFF" },
 ];

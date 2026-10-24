@@ -18,14 +18,14 @@ const SECTIONS = [
   {
     heading: "2. How We Use Your Information",
     body: [
-      "We use your information to operate the marketplace: showing your listings or bookings, connecting tenants with owners, processing rent and referral payouts, verifying property listings, and sending you account and transaction notifications.",
+      "We use your information to operate the marketplace: showing your listings or bookings, connecting tenants with owners, processing rent payments and payouts, verifying property listings, and sending you account and transaction notifications.",
       "We may use aggregated, non-identifying data to improve search relevance and platform features.",
     ],
   },
   {
     heading: "3. Sharing of Information",
     body: [
-      "Contact details you submit through an inquiry or booking are shared with the relevant property owner or manager so they can respond to you. Referral codes and commission data are shared with the referring student.",
+      "Contact details you submit through an inquiry or booking are shared with the relevant property owner or manager so they can respond to you.",
       "We do not sell your personal information. We share data with service providers (such as Supabase for authentication/database hosting, Cloudflare for file storage, and Razorpay for payments) only as needed to run the platform.",
     ],
   },

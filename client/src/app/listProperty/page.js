@@ -75,9 +75,7 @@ function ListPropertyForm() {
     gender: "Boys",
     managerName: "",
     managerPhone: "",
-    referral_code: searchParams?.get("ref") ?? "",
     agent_code: searchParams?.get("agent") ?? "",
-    commission_option: "recurring",
   });
 
   const [rooms, setRooms] = useState([
@@ -171,8 +169,6 @@ function ListPropertyForm() {
     fd.append("manager_name", form.managerName.trim());
     fd.append("manager_phone", form.managerPhone.trim());
     fd.append("amenities", form.amenities.join(","));
-    fd.append("commission_option", form.commission_option);
-    if (form.referral_code.trim()) fd.append("referral_code", form.referral_code.trim());
     // An agent onboarding a PG is connected to it automatically.
     if (form.agent_code.trim() && !isAgent) fd.append("agent_code", form.agent_code.trim());
     if (onboarding) {
@@ -752,40 +748,6 @@ function ListPropertyForm() {
                     ))}
                   </div>
                 )}
-              </section>
-
-              {/* Referral section */}
-              <section className="space-y-4">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)]">Referral (Optional)</h3>
-                <div className="bg-[var(--pg-chip-bg)] border border-blue-100 rounded-xl p-4">
-                  <p className="text-xs text-[var(--pg-primary)] font-medium mb-3">
-                    Were you referred by a student? Enter their code to link them to this listing — they'll earn 2% commission on every booking.
-                  </p>
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">Referral Code</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. ABC12345"
-                      value={form.referral_code}
-                      onChange={(e) => updateField("referral_code", e.target.value.toUpperCase())}
-                      className="w-full bg-white dark:bg-slate-800 border border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 rounded-xl px-4 py-3 text-sm text-[var(--pg-text)] placeholder-slate-400 outline-none transition-all font-mono tracking-widest"
-                    />
-                  </div>
-                  <div className="mt-3">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--pg-text-tertiary)] mb-2">Commission Type for Referrer</label>
-                    <div className="flex gap-3">
-                      {[
-                        { value: "recurring", label: "Recurring (2% monthly)" },
-                        { value: "one-time", label: "One-Time (first booking only)" },
-                      ].map((opt) => (
-                        <label key={opt.value} className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-xl border text-xs font-medium transition-all ${form.commission_option === opt.value ? "border-blue-500 bg-[var(--pg-chip-bg)] text-[var(--pg-primary)]" : "border-[var(--pg-border)] text-[var(--pg-text-secondary)] hover:border-blue-300"}`}>
-                          <input type="radio" name="commission_option" value={opt.value} checked={form.commission_option === opt.value} onChange={() => updateField("commission_option", opt.value)} className="sr-only" />
-                          {opt.label}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
               </section>
 
               {/* Agent section — not shown to an agent, whose PGs connect to them automatically */}

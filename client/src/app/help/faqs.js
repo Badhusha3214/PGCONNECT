@@ -4,9 +4,7 @@ export const FAQ_GROUPS = [
     items: [
       { q: "How do I search for a PG?", a: "Use the search bar on the homepage or go to Explore to filter by budget, gender preference, room type, and city. You can sort results by price or rating." },
       { q: "How do I contact an owner about a listing?", a: "Open any property's detail page and use the \"Send Inquiry\" form. The owner receives your message directly and can follow up with you." },
-      { q: "Can I save listings to look at later?", a: "Yes — click the heart icon on any property card to add it to your saved list." },
-      { q: "How does the referral program work?", a: "Every student gets a unique referral code. Share it with a PG owner — when they list a property and start receiving rent payments through PGCON, you earn a commission. See our How It Works page for the full breakdown." },
-    ],
+      { q: "Can I save listings to look at later?", a: "Yes — click the heart icon on any property card to add it to your saved list." },    ],
   },
   {
     group: "For Owners",
